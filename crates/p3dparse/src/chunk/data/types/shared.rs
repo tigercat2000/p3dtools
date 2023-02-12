@@ -1,8 +1,9 @@
 use bytes::{Buf, Bytes};
 
-use crate::{chunk::types::ChunkType, result::Result};
-
-use super::parse_trait::Parse;
+use crate::{
+    chunk::{data::parse_trait::Parse, types::ChunkType},
+    result::Result,
+};
 
 pub type Vector2 = (f32, f32);
 pub type Vector3 = (f32, f32, f32);

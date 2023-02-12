@@ -20,14 +20,14 @@ use self::{
     },
 };
 
-use super::types::ChunkType;
 use crate::Result;
 use bytes::Bytes;
 use eyre::eyre;
 
+use super::types::ChunkType;
+
 mod helpers;
 mod parse_trait;
-mod shared;
 mod types;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]

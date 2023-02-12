@@ -8,6 +8,7 @@ pub mod old_billboard;
 pub mod old_particle_system;
 pub mod shader;
 pub mod shader_param;
+pub mod shared;
 pub mod skeleton;
 pub mod texture;
 pub mod version;

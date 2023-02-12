@@ -1,7 +1,7 @@
 use crate::Result;
 use bytes::{Buf, Bytes};
 
-use super::shared::{Colour, Quaternion, Vector2, Vector3};
+use super::types::shared::{Colour, Quaternion, Vector2, Vector3};
 
 pub fn pure3d_read_string(bytes: &mut Bytes) -> Result<String> {
     let count = bytes.get_u8();

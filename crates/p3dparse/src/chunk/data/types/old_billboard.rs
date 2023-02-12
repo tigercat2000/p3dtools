@@ -5,7 +5,7 @@ use crate::{
         data::{
             helpers,
             parse_trait::Parse,
-            shared::{Colour, Quaternion, Vector2, Vector3},
+            types::shared::{Colour, Quaternion, Vector2, Vector3},
         },
         types::ChunkType,
     },
