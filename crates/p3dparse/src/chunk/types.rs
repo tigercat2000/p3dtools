@@ -200,9 +200,11 @@ pub enum ChunkType {
     Image = 0x0001_9001,
     ImageData = 0x0001_9002,
     Sprite = 0x0001_9005,
-    Unknown20000 = 0x0002_0000,
+    /// Originally Unknown20000
+    AnimatedObjectFactory = 0x0002_0000,
     AnimatedObject = 0x0002_0001,
-    Unknown20002 = 0x0002_0002,
+    /// Originally Unknown20002
+    AnimatedObjectAnimation = 0x0002_0002,
     Expression = 0x0002_1000,
     ExpressionGroup = 0x0002_1001,
     ExpressionMixer = 0x0002_1002,

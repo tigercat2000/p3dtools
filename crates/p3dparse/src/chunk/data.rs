@@ -23,10 +23,12 @@ use self::{
 use crate::{
     chunk::{
         data::types::mesh::{
-            BoundingBox, BoundingSphere, ColourList, CompositeDrawable, CompositeDrawableEffect,
+            AnimatedObject, AnimatedObjectAnimation, AnimatedObjectFactory, BoundingBox,
+            BoundingSphere, ColourList, CompositeDrawable, CompositeDrawableEffect,
             CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
             CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
-            IndexList, RenderStatus, UVList,
+            IndexList, MultiController, MultiControllerTracks, OldFrameController, RenderStatus,
+            UVList,
         },
         types::ChunkType,
     },
@@ -91,6 +93,12 @@ pub enum ChunkData {
     CompositeDrawableSkin(Name, CompositeDrawableSkin),
     CompositeDrawableSkinList(CompositeDrawableSkinList),
     CompositeDrawableSortOrder(CompositeDrawableSortOrder),
+    AnimatedObjectFactory(Version, Name, AnimatedObjectFactory),
+    AnimatedObject(Version, Name, AnimatedObject),
+    AnimatedObjectAnimation(Version, Name, AnimatedObjectAnimation),
+    OldFrameController(Version, Name, OldFrameController),
+    MultiController(Name, Version, MultiController),
+    MultiControllerTracks(MultiControllerTracks),
     Unknown,
 }
 
@@ -275,6 +283,34 @@ impl ChunkData {
             )),
             ChunkType::CompositeDrawableSortOrder => Ok(ChunkData::CompositeDrawableSortOrder(
                 CompositeDrawableSortOrder::parse(bytes, typ)?,
+            )),
+            ChunkType::AnimatedObjectFactory => Ok(ChunkData::AnimatedObjectFactory(
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                AnimatedObjectFactory::parse(bytes, typ)?,
+            )),
+            ChunkType::AnimatedObject => Ok(ChunkData::AnimatedObject(
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                AnimatedObject::parse(bytes, typ)?,
+            )),
+            ChunkType::AnimatedObjectAnimation => Ok(ChunkData::AnimatedObjectAnimation(
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                AnimatedObjectAnimation::parse(bytes, typ)?,
+            )),
+            ChunkType::OldFrameController => Ok(ChunkData::OldFrameController(
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldFrameController::parse(bytes, typ)?,
+            )),
+            ChunkType::MultiController => Ok(ChunkData::MultiController(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                MultiController::parse(bytes, typ)?,
+            )),
+            ChunkType::MultiControllerTracks => Ok(ChunkData::MultiControllerTracks(
+                MultiControllerTracks::parse(bytes, typ)?,
             )),
             // -- Other produces error -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
