@@ -22,7 +22,9 @@ use self::{
 
 use crate::{
     chunk::{
-        data::types::mesh::{ColourList, IndexList, UVList},
+        data::types::mesh::{
+            BoundingBox, BoundingSphere, ColourList, IndexList, RenderStatus, UVList,
+        },
         types::ChunkType,
     },
     Result,
@@ -75,6 +77,9 @@ pub enum ChunkData {
     UVList(UVList),
     ColourList(ColourList),
     IndexList(IndexList),
+    BoundingBox(BoundingBox),
+    BoundingSphere(BoundingSphere),
+    RenderStatus(RenderStatus),
     Unknown,
 }
 
@@ -225,6 +230,13 @@ impl ChunkData {
             ChunkType::UVList => Ok(ChunkData::UVList(UVList::parse(bytes, typ)?)),
             ChunkType::ColourList => Ok(ChunkData::ColourList(ColourList::parse(bytes, typ)?)),
             ChunkType::IndexList => Ok(ChunkData::IndexList(IndexList::parse(bytes, typ)?)),
+            ChunkType::BBox => Ok(ChunkData::BoundingBox(BoundingBox::parse(bytes, typ)?)),
+            ChunkType::BSphere => Ok(ChunkData::BoundingSphere(BoundingSphere::parse(
+                bytes, typ,
+            )?)),
+            ChunkType::RenderStatus => {
+                Ok(ChunkData::RenderStatus(RenderStatus::parse(bytes, typ)?))
+            }
             // -- Other produces error -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
         }

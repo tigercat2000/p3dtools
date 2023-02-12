@@ -150,3 +150,46 @@ impl Parse for IndexList {
         Ok(IndexList { indices })
     }
 }
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct BoundingBox {
+    pub low: Vector3,
+    pub high: Vector3,
+}
+
+impl Parse for BoundingBox {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(BoundingBox {
+            low: helpers::read_vec3(bytes)?,
+            high: helpers::read_vec3(bytes)?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct BoundingSphere {
+    pub centre: Vector3,
+    pub radius: f32,
+}
+
+impl Parse for BoundingSphere {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(BoundingSphere {
+            centre: helpers::read_vec3(bytes)?,
+            radius: bytes.get_f32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RenderStatus {
+    pub cast_shadow: u32,
+}
+
+impl Parse for RenderStatus {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(RenderStatus {
+            cast_shadow: bytes.get_u32_le(),
+        })
+    }
+}
