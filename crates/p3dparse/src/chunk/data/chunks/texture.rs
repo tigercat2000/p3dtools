@@ -3,7 +3,7 @@ use crate::{chunk::types::ChunkType, Result};
 use bytes::{Buf, Bytes};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TextureData {
+pub struct Texture {
     pub width: u32,
     pub height: u32,
     pub bpp: u32,
@@ -14,9 +14,9 @@ pub struct TextureData {
     pub priority: u32,
 }
 
-impl Parse for TextureData {
+impl Parse for Texture {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(TextureData {
+        Ok(Texture {
             width: bytes.get_u32_le(),
             height: bytes.get_u32_le(),
             bpp: bytes.get_u32_le(),

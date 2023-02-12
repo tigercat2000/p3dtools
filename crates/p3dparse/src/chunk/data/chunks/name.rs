@@ -6,13 +6,13 @@ use crate::{
 use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct NameData {
+pub struct Name {
     pub name: String,
 }
 
-impl Parse for NameData {
+impl Parse for Name {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         let name = pure3d_read_string(bytes)?;
-        Ok(NameData { name })
+        Ok(Name { name })
     }
 }

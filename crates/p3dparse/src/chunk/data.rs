@@ -1,26 +1,21 @@
 use self::{
     chunks::{
-        animation::{AnimationData, AnimationGroupData, AnimationGroupListData, AnimationSizeData},
-        channel::{ChannelData, ChannelInterpolationData},
-        explosion::ExplosionEffectData,
-        image::{ImageData, ImageRawData},
-        mesh::{MeshData, OldPrimGroupData, PositionListData},
-        name::NameData,
+        animation::{Animation, AnimationGroup, AnimationGroupList, AnimationSize},
+        channel::{Channel, ChannelInterpolation},
+        explosion::ExplosionEffect,
+        image::{Image, ImageRaw},
+        mesh::{Mesh, OldPrimGroup, PositionList},
+        name::Name,
         old_billboard::{
-            OldBillboardDisplayInfoData, OldBillboardPerspectiveInfoData, OldBillboardQuadData,
-            OldBillboardQuadGroupData,
+            OldBillboardDisplayInfo, OldBillboardPerspectiveInfo, OldBillboardQuad,
+            OldBillboardQuadGroup,
         },
-        old_particle_system::{
-            OldBaseEmitterData, OldParticleSystemData, OldSpriteEmitterData, WorldEffectData,
-        },
-        shader::{ShaderData, VertexShaderData},
-        shader_param::ShaderParamData,
-        skeleton::{
-            SkeletonData, SkeletonJointBonePreserveData, SkeletonJointData,
-            SkeletonJointMirrorMapData,
-        },
-        texture::TextureData,
-        version::VersionData,
+        old_particle_system::{OldBaseEmitter, OldParticleSystem, OldSpriteEmitter, WorldEffect},
+        shader::{Shader, VertexShader},
+        shader_param::ShaderParam,
+        skeleton::{Skeleton, SkeletonJoint, SkeletonJointBonePreserve, SkeletonJointMirrorMap},
+        texture::Texture,
+        version::Version,
     },
     parse_trait::Parse,
 };
@@ -39,40 +34,40 @@ mod parse_trait;
 pub enum ChunkData {
     None,
     // -- Rendering -- //
-    Texture(NameData, VersionData, TextureData),
-    Image(NameData, VersionData, ImageData),
-    ImageRaw(ImageRawData),
-    Shader(NameData, VersionData, ShaderData),
-    ShaderParam(ShaderParamData),
-    VertexShader(VertexShaderData),
+    Texture(Name, Version, Texture),
+    Image(Name, Version, Image),
+    ImageRaw(ImageRaw),
+    Shader(Name, Version, Shader),
+    ShaderParam(ShaderParam),
+    VertexShader(VertexShader),
     // -- Old Particle System -- //
-    OldParticleSystem(VersionData, NameData, OldParticleSystemData),
-    OldSpriteEmitter(VersionData, NameData, OldSpriteEmitterData),
-    OldBaseEmitter(VersionData, NameData, OldBaseEmitterData),
-    WorldEffect(VersionData, NameData, WorldEffectData),
+    OldParticleSystem(Version, Name, OldParticleSystem),
+    OldSpriteEmitter(Version, Name, OldSpriteEmitter),
+    OldBaseEmitter(Version, Name, OldBaseEmitter),
+    WorldEffect(Version, Name, WorldEffect),
     // -- Animations -- //
-    Animation(VersionData, NameData, AnimationData),
-    AnimationSize(VersionData, AnimationSizeData),
-    AnimationGroup(VersionData, NameData, AnimationGroupData),
-    AnimationGroupList(VersionData, AnimationGroupListData),
-    Channel(VersionData, ChannelData),
-    ChannelInterpolation(VersionData, ChannelInterpolationData),
+    Animation(Version, Name, Animation),
+    AnimationSize(Version, AnimationSize),
+    AnimationGroup(Version, Name, AnimationGroup),
+    AnimationGroupList(Version, AnimationGroupList),
+    Channel(Version, Channel),
+    ChannelInterpolation(Version, ChannelInterpolation),
     // -- Old Billboards -- //
-    OldBillboardQuad(VersionData, NameData, OldBillboardQuadData),
-    OldBillboardQuadGroup(VersionData, NameData, OldBillboardQuadGroupData),
-    OldBillboardDisplayInfo(VersionData, OldBillboardDisplayInfoData),
-    OldBillboardPerspectiveInfo(VersionData, OldBillboardPerspectiveInfoData),
+    OldBillboardQuad(Version, Name, OldBillboardQuad),
+    OldBillboardQuadGroup(Version, Name, OldBillboardQuadGroup),
+    OldBillboardDisplayInfo(Version, OldBillboardDisplayInfo),
+    OldBillboardPerspectiveInfo(Version, OldBillboardPerspectiveInfo),
     // -- Explosion FX -- //
-    ExplosionEffectType(ExplosionEffectData),
+    ExplosionEffectType(ExplosionEffect),
     // -- Skeleton -- //
-    Skeleton(NameData, VersionData, SkeletonData),
-    SkeletonJoint(NameData, SkeletonJointData),
-    SkeletonJointMirrorMap(SkeletonJointMirrorMapData),
-    SkeletonJointBonePreserve(SkeletonJointBonePreserveData),
+    Skeleton(Name, Version, Skeleton),
+    SkeletonJoint(Name, SkeletonJoint),
+    SkeletonJointMirrorMap(SkeletonJointMirrorMap),
+    SkeletonJointBonePreserve(SkeletonJointBonePreserve),
     // -- Mesh -- //
-    Mesh(NameData, VersionData, MeshData),
-    OldPrimGroup(VersionData, OldPrimGroupData),
-    PositionList(PositionListData),
+    Mesh(Name, Version, Mesh),
+    OldPrimGroup(Version, OldPrimGroup),
+    PositionList(PositionList),
     Unknown,
 }
 
@@ -82,73 +77,73 @@ impl ChunkData {
             ChunkType::Root => Ok(ChunkData::None),
             // -- Rendering -- //
             ChunkType::Texture => Ok(ChunkData::Texture(
-                NameData::parse(bytes, typ)?,
-                VersionData::parse(bytes, typ)?,
-                TextureData::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Texture::parse(bytes, typ)?,
             )),
             ChunkType::Image => Ok(ChunkData::Image(
-                NameData::parse(bytes, typ)?,
-                VersionData::parse(bytes, typ)?,
-                ImageData::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Image::parse(bytes, typ)?,
             )),
-            ChunkType::ImageData => Ok(ChunkData::ImageRaw(ImageRawData::parse(bytes, typ)?)),
+            ChunkType::ImageData => Ok(ChunkData::ImageRaw(ImageRaw::parse(bytes, typ)?)),
             ChunkType::Shader => Ok(ChunkData::Shader(
-                NameData::parse(bytes, typ)?,
-                VersionData::parse(bytes, typ)?,
-                ShaderData::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Shader::parse(bytes, typ)?,
             )),
             ChunkType::ShaderTextureParam
             | ChunkType::ShaderIntParam
             | ChunkType::ShaderFloatParam
             | ChunkType::ShaderColourParam => {
-                Ok(ChunkData::ShaderParam(ShaderParamData::parse(bytes, typ)?))
+                Ok(ChunkData::ShaderParam(ShaderParam::parse(bytes, typ)?))
             }
-            ChunkType::VertexShader => Ok(ChunkData::VertexShader(VertexShaderData::parse(
-                bytes, typ,
-            )?)),
+            ChunkType::VertexShader => {
+                Ok(ChunkData::VertexShader(VertexShader::parse(bytes, typ)?))
+            }
             // -- Old Particle System -- //
             ChunkType::OldParticleSystem => Ok(ChunkData::OldParticleSystem(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                OldParticleSystemData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldParticleSystem::parse(bytes, typ)?,
             )),
             // Ignore these chunks
             ChunkType::OldParticleInstancingInfo | ChunkType::OldParticleAnimation => {
                 Ok(ChunkData::Unknown)
             }
             ChunkType::OldSpriteEmitter => Ok(ChunkData::OldSpriteEmitter(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                OldSpriteEmitterData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldSpriteEmitter::parse(bytes, typ)?,
             )),
             ChunkType::OldBaseEmitter => Ok(ChunkData::OldBaseEmitter(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                OldBaseEmitterData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldBaseEmitter::parse(bytes, typ)?,
             )),
             ChunkType::WorldEffect => Ok(ChunkData::WorldEffect(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                WorldEffectData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                WorldEffect::parse(bytes, typ)?,
             )),
             // -- Animations -- //
             ChunkType::Animation => Ok(ChunkData::Animation(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                AnimationData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                Animation::parse(bytes, typ)?,
             )),
             ChunkType::AnimationSize => Ok(ChunkData::AnimationSize(
-                VersionData::parse(bytes, typ)?,
-                AnimationSizeData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                AnimationSize::parse(bytes, typ)?,
             )),
             ChunkType::AnimationGroup => Ok(ChunkData::AnimationGroup(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                AnimationGroupData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                AnimationGroup::parse(bytes, typ)?,
             )),
             ChunkType::AnimationGroupList => Ok(ChunkData::AnimationGroupList(
-                VersionData::parse(bytes, typ)?,
-                AnimationGroupListData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                AnimationGroupList::parse(bytes, typ)?,
             )),
             ChunkType::Float1Channel
             | ChunkType::Float2Channel
@@ -158,68 +153,68 @@ impl ChunkData {
             | ChunkType::Vector3DOFChannel
             | ChunkType::QuaternionChannel
             | ChunkType::ColourChannel => Ok(ChunkData::Channel(
-                VersionData::parse(bytes, typ)?,
-                ChannelData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Channel::parse(bytes, typ)?,
             )),
             ChunkType::ChannelInterpolationMode => Ok(ChunkData::ChannelInterpolation(
-                VersionData::parse(bytes, typ)?,
-                ChannelInterpolationData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                ChannelInterpolation::parse(bytes, typ)?,
             )),
             ChunkType::OldEmitterAnimation | ChunkType::OldGeneratorAnimation => {
                 Ok(ChunkData::None)
             }
             // -- Old Billboards -- //
             ChunkType::OldBillboardQuad => Ok(ChunkData::OldBillboardQuad(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                OldBillboardQuadData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldBillboardQuad::parse(bytes, typ)?,
             )),
             ChunkType::OldBillboardQuadGroup => Ok(ChunkData::OldBillboardQuadGroup(
-                VersionData::parse(bytes, typ)?,
-                NameData::parse(bytes, typ)?,
-                OldBillboardQuadGroupData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldBillboardQuadGroup::parse(bytes, typ)?,
             )),
             ChunkType::OldBillboardDisplayInfo => Ok(ChunkData::OldBillboardDisplayInfo(
-                VersionData::parse(bytes, typ)?,
-                OldBillboardDisplayInfoData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                OldBillboardDisplayInfo::parse(bytes, typ)?,
             )),
             ChunkType::OldBillboardPerspectiveInfo => Ok(ChunkData::OldBillboardPerspectiveInfo(
-                VersionData::parse(bytes, typ)?,
-                OldBillboardPerspectiveInfoData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                OldBillboardPerspectiveInfo::parse(bytes, typ)?,
             )),
             // -- Explosion FX -- //
             ChunkType::ExplosionEffectType => Ok(ChunkData::ExplosionEffectType(
-                ExplosionEffectData::parse(bytes, typ)?,
+                ExplosionEffect::parse(bytes, typ)?,
             )),
             // -- Skeleton -- //
             ChunkType::Skeleton => Ok(ChunkData::Skeleton(
-                NameData::parse(bytes, typ)?,
-                VersionData::parse(bytes, typ)?,
-                SkeletonData::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Skeleton::parse(bytes, typ)?,
             )),
             ChunkType::SkeletonJoint => Ok(ChunkData::SkeletonJoint(
-                NameData::parse(bytes, typ)?,
-                SkeletonJointData::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                SkeletonJoint::parse(bytes, typ)?,
             )),
             ChunkType::SkeletonJointMirrorMap => Ok(ChunkData::SkeletonJointMirrorMap(
-                SkeletonJointMirrorMapData::parse(bytes, typ)?,
+                SkeletonJointMirrorMap::parse(bytes, typ)?,
             )),
             ChunkType::SkeletonJointBonePreserve => Ok(ChunkData::SkeletonJointBonePreserve(
-                SkeletonJointBonePreserveData::parse(bytes, typ)?,
+                SkeletonJointBonePreserve::parse(bytes, typ)?,
             )),
             // -- Mesh -- //
             ChunkType::Mesh => Ok(ChunkData::Mesh(
-                NameData::parse(bytes, typ)?,
-                VersionData::parse(bytes, typ)?,
-                MeshData::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Mesh::parse(bytes, typ)?,
             )),
             ChunkType::OldPrimGroup => Ok(ChunkData::OldPrimGroup(
-                VersionData::parse(bytes, typ)?,
-                OldPrimGroupData::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                OldPrimGroup::parse(bytes, typ)?,
             )),
-            ChunkType::PositionList => Ok(ChunkData::PositionList(PositionListData::parse(
-                bytes, typ,
-            )?)),
+            ChunkType::PositionList => {
+                Ok(ChunkData::PositionList(PositionList::parse(bytes, typ)?))
+            }
             // -- Other produces error -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
         }

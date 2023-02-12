@@ -8,16 +8,16 @@ use crate::{
 use bytes::{Buf, Bytes};
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct AnimationData {
+pub struct Animation {
     pub animation_type: String,
     pub num_frames: f32,
     pub frame_rate: f32,
     pub cyclic: u32,
 }
 
-impl Parse for AnimationData {
+impl Parse for Animation {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(AnimationData {
+        Ok(Animation {
             animation_type: helpers::pure3d_read_fourcc(bytes)?,
             num_frames: bytes.get_f32_le(),
             frame_rate: bytes.get_f32_le(),
@@ -28,16 +28,16 @@ impl Parse for AnimationData {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(clippy::upper_case_acronyms, non_snake_case)]
-pub struct AnimationSizeData {
+pub struct AnimationSize {
     pub PC: u32,
     pub PS2: u32,
     pub XBOX: u32,
     pub GC: u32,
 }
 
-impl Parse for AnimationSizeData {
+impl Parse for AnimationSize {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(AnimationSizeData {
+        Ok(AnimationSize {
             PC: bytes.get_u32_le(),
             PS2: bytes.get_u32_le(),
             XBOX: bytes.get_u32_le(),
@@ -48,14 +48,14 @@ impl Parse for AnimationSizeData {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct AnimationGroupData {
+pub struct AnimationGroup {
     pub group_id: u32,
     pub num_channels: u32,
 }
 
-impl Parse for AnimationGroupData {
+impl Parse for AnimationGroup {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(AnimationGroupData {
+        Ok(AnimationGroup {
             group_id: bytes.get_u32_le(),
             num_channels: bytes.get_u32_le(),
         })
@@ -64,13 +64,13 @@ impl Parse for AnimationGroupData {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct AnimationGroupListData {
+pub struct AnimationGroupList {
     pub num_groups: u32,
 }
 
-impl Parse for AnimationGroupListData {
+impl Parse for AnimationGroupList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(AnimationGroupListData {
+        Ok(AnimationGroupList {
             num_groups: bytes.get_u32_le(),
         })
     }

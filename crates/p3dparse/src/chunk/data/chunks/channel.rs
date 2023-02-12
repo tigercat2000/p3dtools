@@ -14,13 +14,13 @@ use eyre::eyre;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct ChannelData {
+pub struct Channel {
     pub param: String,
     pub frames: Vec<u16>,
-    pub values: ChannelDataValues,
+    pub values: ChannelValues,
 }
 
-impl ChannelData {
+impl Channel {
     fn parse_vector1dof(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         let param = helpers::pure3d_read_fourcc(bytes)?;
         let mapping = bytes.get_u16_le();
@@ -37,10 +37,10 @@ impl ChannelData {
             values.push(bytes.get_f32_le());
         }
 
-        Ok(ChannelData {
+        Ok(Channel {
             param,
             frames,
-            values: ChannelDataValues::Vector1OF(mapping, constants, values),
+            values: ChannelValues::Vector1OF(mapping, constants, values),
         })
     }
 
@@ -60,19 +60,19 @@ impl ChannelData {
             values.push(helpers::read_vec2(bytes)?);
         }
 
-        Ok(ChannelData {
+        Ok(Channel {
             param,
             frames,
-            values: ChannelDataValues::Vector2OF(mapping, constants, values),
+            values: ChannelValues::Vector2OF(mapping, constants, values),
         })
     }
 }
 
-impl Parse for ChannelData {
+impl Parse for Channel {
     fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
         match typ {
-            ChunkType::Vector1DOFChannel => return ChannelData::parse_vector1dof(bytes, typ),
-            ChunkType::Vector2DOFChannel => return ChannelData::parse_vector2dof(bytes, typ),
+            ChunkType::Vector1DOFChannel => return Channel::parse_vector1dof(bytes, typ),
+            ChunkType::Vector2DOFChannel => return Channel::parse_vector2dof(bytes, typ),
             _ => {}
         }
 
@@ -90,8 +90,8 @@ impl Parse for ChannelData {
                 for _ in 0..frame_count {
                     values.push(bytes.get_f32_le());
                 }
-                let values = ChannelDataValues::Float1(values);
-                Ok(ChannelData {
+                let values = ChannelValues::Float1(values);
+                Ok(Channel {
                     param,
                     frames,
                     values,
@@ -102,8 +102,8 @@ impl Parse for ChannelData {
                 for _ in 0..frame_count {
                     values.push(helpers::read_vec2(bytes)?);
                 }
-                let values = ChannelDataValues::Float2(values);
-                Ok(ChannelData {
+                let values = ChannelValues::Float2(values);
+                Ok(Channel {
                     param,
                     frames,
                     values,
@@ -114,8 +114,8 @@ impl Parse for ChannelData {
                 for _ in 0..frame_count {
                     values.push(bytes.get_u32_le())
                 }
-                let values = ChannelDataValues::Int(values);
-                Ok(ChannelData {
+                let values = ChannelValues::Int(values);
+                Ok(Channel {
                     param,
                     frames,
                     values,
@@ -126,8 +126,8 @@ impl Parse for ChannelData {
                 for _ in 0..frame_count {
                     values.push(helpers::read_vec3(bytes)?)
                 }
-                let values = ChannelDataValues::Vector3OF(values);
-                Ok(ChannelData {
+                let values = ChannelValues::Vector3OF(values);
+                Ok(Channel {
                     param,
                     frames,
                     values,
@@ -138,8 +138,8 @@ impl Parse for ChannelData {
                 for _ in 0..frame_count {
                     values.push(helpers::read_quaternion(bytes)?)
                 }
-                let values = ChannelDataValues::Quaternion(values);
-                Ok(ChannelData {
+                let values = ChannelValues::Quaternion(values);
+                Ok(Channel {
                     param,
                     frames,
                     values,
@@ -150,8 +150,8 @@ impl Parse for ChannelData {
                 for _ in 0..frame_count {
                     values.push(helpers::read_colour(bytes)?)
                 }
-                let values = ChannelDataValues::Colour(values);
-                Ok(ChannelData {
+                let values = ChannelValues::Colour(values);
+                Ok(Channel {
                     param,
                     frames,
                     values,
@@ -167,7 +167,7 @@ impl Parse for ChannelData {
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[allow(clippy::upper_case_acronyms)]
-pub enum ChannelDataValues {
+pub enum ChannelValues {
     Float1(Vec<f32>),
     Float2(Vec<Vector2>),
     Int(Vec<u32>),
@@ -180,13 +180,13 @@ pub enum ChannelDataValues {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct ChannelInterpolationData {
+pub struct ChannelInterpolation {
     pub interpolate: u32,
 }
 
-impl Parse for ChannelInterpolationData {
+impl Parse for ChannelInterpolation {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(ChannelInterpolationData {
+        Ok(ChannelInterpolation {
             interpolate: bytes.get_u32_le(),
         })
     }

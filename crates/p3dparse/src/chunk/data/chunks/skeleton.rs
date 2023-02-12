@@ -8,20 +8,20 @@ use crate::{
 use bytes::{Buf, Bytes};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct SkeletonData {
+pub struct Skeleton {
     pub num_joints: u32,
 }
 
-impl Parse for SkeletonData {
+impl Parse for Skeleton {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(SkeletonData {
+        Ok(Skeleton {
             num_joints: bytes.get_u32_le(),
         })
     }
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct SkeletonJointData {
+pub struct SkeletonJoint {
     pub parent: u32,
     pub dof: i32,
     pub free_axis: i32,
@@ -31,9 +31,9 @@ pub struct SkeletonJointData {
     pub rest_pose: Matrix,
 }
 
-impl Parse for SkeletonJointData {
+impl Parse for SkeletonJoint {
     fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
-        Ok(SkeletonJointData {
+        Ok(SkeletonJoint {
             parent: bytes.get_u32_le(),
             dof: bytes.get_i32_le(),
             free_axis: bytes.get_i32_le(),
@@ -46,16 +46,16 @@ impl Parse for SkeletonJointData {
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct SkeletonJointMirrorMapData {
+pub struct SkeletonJointMirrorMap {
     pub mapped_joint_index: u32,
     pub x_axis_map: f32,
     pub y_axis_map: f32,
     pub z_axis_map: f32,
 }
 
-impl Parse for SkeletonJointMirrorMapData {
+impl Parse for SkeletonJointMirrorMap {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(SkeletonJointMirrorMapData {
+        Ok(SkeletonJointMirrorMap {
             mapped_joint_index: bytes.get_u32_le(),
             x_axis_map: bytes.get_f32_le(),
             y_axis_map: bytes.get_f32_le(),
@@ -65,13 +65,13 @@ impl Parse for SkeletonJointMirrorMapData {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct SkeletonJointBonePreserveData {
+pub struct SkeletonJointBonePreserve {
     pub preserve_bone_lengths: u32,
 }
 
-impl Parse for SkeletonJointBonePreserveData {
+impl Parse for SkeletonJointBonePreserve {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(SkeletonJointBonePreserveData {
+        Ok(SkeletonJointBonePreserve {
             preserve_bone_lengths: bytes.get_u32_le(),
         })
     }

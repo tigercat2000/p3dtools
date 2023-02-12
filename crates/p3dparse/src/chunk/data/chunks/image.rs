@@ -33,7 +33,7 @@ pub enum ImageFormat {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ImageData {
+pub struct Image {
     pub width: u32,
     pub height: u32,
     pub bpp: u32,
@@ -42,9 +42,9 @@ pub struct ImageData {
     pub image_format: ImageFormat,
 }
 
-impl Parse for ImageData {
+impl Parse for Image {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(ImageData {
+        Ok(Image {
             width: bytes.get_u32_le(),
             height: bytes.get_u32_le(),
             bpp: bytes.get_u32_le(),
@@ -56,11 +56,11 @@ impl Parse for ImageData {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ImageRawData {
+pub struct ImageRaw {
     pub data: Vec<u8>,
 }
 
-impl Parse for ImageRawData {
+impl Parse for ImageRaw {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         let size = bytes.get_u32_le();
 
@@ -69,6 +69,6 @@ impl Parse for ImageRawData {
             data.push(bytes.get_u8());
         }
 
-        Ok(ImageRawData { data })
+        Ok(ImageRaw { data })
     }
 }

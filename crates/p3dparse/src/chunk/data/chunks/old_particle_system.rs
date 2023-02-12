@@ -6,7 +6,7 @@ use crate::{
 use bytes::{Buf, Bytes};
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct OldParticleSystemData {
+pub struct OldParticleSystem {
     pub framerate: f32,
     pub num_anim_frames: u32,
     pub num_ol_frames: u32,
@@ -15,9 +15,9 @@ pub struct OldParticleSystemData {
     pub num_emitters: u32,
 }
 
-impl Parse for OldParticleSystemData {
+impl Parse for OldParticleSystem {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(OldParticleSystemData {
+        Ok(OldParticleSystem {
             framerate: bytes.get_f32_le(),
             num_anim_frames: bytes.get_u32_le(),
             num_ol_frames: bytes.get_u32_le(),
@@ -29,7 +29,7 @@ impl Parse for OldParticleSystemData {
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct OldSpriteEmitterData {
+pub struct OldSpriteEmitter {
     pub shader_name: String,
     pub angle_mode: String,
     pub angle: f32,
@@ -38,9 +38,9 @@ pub struct OldSpriteEmitterData {
     pub texture_frame_rate: u32,
 }
 
-impl Parse for OldSpriteEmitterData {
+impl Parse for OldSpriteEmitter {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(OldSpriteEmitterData {
+        Ok(OldSpriteEmitter {
             shader_name: helpers::pure3d_read_string(bytes)?,
             angle_mode: helpers::pure3d_read_fourcc(bytes)?,
             angle: bytes.get_f32_le(),
@@ -52,7 +52,7 @@ impl Parse for OldSpriteEmitterData {
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct OldBaseEmitterData {
+pub struct OldBaseEmitter {
     pub particle_type: String,
     pub generator_type: String,
     pub ztest: u32,
@@ -64,9 +64,9 @@ pub struct OldBaseEmitterData {
     pub translational_cohesion: f32,
 }
 
-impl Parse for OldBaseEmitterData {
+impl Parse for OldBaseEmitter {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(OldBaseEmitterData {
+        Ok(OldBaseEmitter {
             particle_type: helpers::pure3d_read_fourcc(bytes)?,
             generator_type: helpers::pure3d_read_fourcc(bytes)?,
             ztest: bytes.get_u32_le(),
@@ -81,13 +81,13 @@ impl Parse for OldBaseEmitterData {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct WorldEffectData {
+pub struct WorldEffect {
     pub unknown: String,
 }
 
-impl Parse for WorldEffectData {
+impl Parse for WorldEffect {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(WorldEffectData {
+        Ok(WorldEffect {
             unknown: helpers::pure3d_read_string(bytes)?,
         })
     }

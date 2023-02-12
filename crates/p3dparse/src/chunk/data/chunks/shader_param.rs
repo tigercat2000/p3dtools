@@ -6,14 +6,14 @@ use crate::{
 use bytes::{Buf, Bytes};
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct ShaderParamData {
+pub struct ShaderParam {
     pub param: String,
     pub value: ShaderParamValue,
 }
 
-impl Parse for ShaderParamData {
+impl Parse for ShaderParam {
     fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
-        Ok(ShaderParamData {
+        Ok(ShaderParam {
             param: helpers::pure3d_read_fourcc(bytes)?,
             value: match typ {
                 ChunkType::ShaderTextureParam => {
