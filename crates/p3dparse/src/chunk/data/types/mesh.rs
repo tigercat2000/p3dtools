@@ -1,6 +1,6 @@
 use crate::{
     chunk::{
-        data::{common_types::Vector3, helpers, parse_trait::Parse},
+        data::{helpers, parse_trait::Parse, shared::Vector3},
         types::ChunkType,
     },
     Result,

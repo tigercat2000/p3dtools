@@ -3,9 +3,9 @@ use bytes::{Buf, Bytes};
 use crate::{
     chunk::{
         data::{
-            common_types::{Colour, Quaternion, Vector2, Vector3},
             helpers,
             parse_trait::Parse,
+            shared::{Colour, Quaternion, Vector2, Vector3},
         },
         types::ChunkType,
     },

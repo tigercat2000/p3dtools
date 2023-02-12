@@ -1,5 +1,6 @@
 use self::{
-    chunks::{
+    parse_trait::Parse,
+    types::{
         animation::{Animation, AnimationGroup, AnimationGroupList, AnimationSize},
         channel::{Channel, ChannelInterpolation},
         explosion::ExplosionEffect,
@@ -17,7 +18,6 @@ use self::{
         texture::Texture,
         version::Version,
     },
-    parse_trait::Parse,
 };
 
 use super::types::ChunkType;
@@ -25,10 +25,10 @@ use crate::Result;
 use bytes::Bytes;
 use eyre::eyre;
 
-mod chunks;
-mod common_types;
 mod helpers;
 mod parse_trait;
+mod shared;
+mod types;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
 pub enum ChunkData {
