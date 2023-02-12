@@ -193,3 +193,111 @@ impl Parse for RenderStatus {
         })
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CompositeDrawable {
+    pub skeleton_name: String,
+}
+
+impl Parse for CompositeDrawable {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawable {
+            skeleton_name: helpers::pure3d_read_string(bytes)?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CompositeDrawableSkinList {
+    pub num_elements: u32,
+}
+
+impl Parse for CompositeDrawableSkinList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawableSkinList {
+            num_elements: bytes.get_u32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CompositeDrawableSkin {
+    pub is_translucent: u32,
+}
+
+impl Parse for CompositeDrawableSkin {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawableSkin {
+            is_translucent: bytes.get_u32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CompositeDrawablePropList {
+    pub num_elements: u32,
+}
+
+impl Parse for CompositeDrawablePropList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawablePropList {
+            num_elements: bytes.get_u32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CompositeDrawableProp {
+    pub is_translucent: u32,
+    pub skeleton_joint_id: u32,
+}
+
+impl Parse for CompositeDrawableProp {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawableProp {
+            is_translucent: bytes.get_u32_le(),
+            skeleton_joint_id: bytes.get_u32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CompositeDrawableEffectList {
+    pub num_elements: u32,
+}
+
+impl Parse for CompositeDrawableEffectList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawableEffectList {
+            num_elements: bytes.get_u32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CompositeDrawableEffect {
+    pub is_translucent: u32,
+    pub skeleton_joint_id: u32,
+}
+
+impl Parse for CompositeDrawableEffect {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawableEffect {
+            is_translucent: bytes.get_u32_le(),
+            skeleton_joint_id: bytes.get_u32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct CompositeDrawableSortOrder {
+    pub sort_order: f32,
+}
+
+impl Parse for CompositeDrawableSortOrder {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CompositeDrawableSortOrder {
+            sort_order: bytes.get_f32_le(),
+        })
+    }
+}

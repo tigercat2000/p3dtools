@@ -23,7 +23,10 @@ use self::{
 use crate::{
     chunk::{
         data::types::mesh::{
-            BoundingBox, BoundingSphere, ColourList, IndexList, RenderStatus, UVList,
+            BoundingBox, BoundingSphere, ColourList, CompositeDrawable, CompositeDrawableEffect,
+            CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
+            CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
+            IndexList, RenderStatus, UVList,
         },
         types::ChunkType,
     },
@@ -80,6 +83,14 @@ pub enum ChunkData {
     BoundingBox(BoundingBox),
     BoundingSphere(BoundingSphere),
     RenderStatus(RenderStatus),
+    CompositeDrawable(Name, CompositeDrawable),
+    CompositeDrawableEffect(Name, CompositeDrawableEffect),
+    CompositeDrawableEffectList(CompositeDrawableEffectList),
+    CompositeDrawableProp(Name, CompositeDrawableProp),
+    CompositeDrawablePropList(CompositeDrawablePropList),
+    CompositeDrawableSkin(Name, CompositeDrawableSkin),
+    CompositeDrawableSkinList(CompositeDrawableSkinList),
+    CompositeDrawableSortOrder(CompositeDrawableSortOrder),
     Unknown,
 }
 
@@ -237,6 +248,34 @@ impl ChunkData {
             ChunkType::RenderStatus => {
                 Ok(ChunkData::RenderStatus(RenderStatus::parse(bytes, typ)?))
             }
+            ChunkType::CompositeDrawable => Ok(ChunkData::CompositeDrawable(
+                Name::parse(bytes, typ)?,
+                CompositeDrawable::parse(bytes, typ)?,
+            )),
+            ChunkType::CompositeDrawableEffect => Ok(ChunkData::CompositeDrawableEffect(
+                Name::parse(bytes, typ)?,
+                CompositeDrawableEffect::parse(bytes, typ)?,
+            )),
+            ChunkType::CompositeDrawableEffectList => Ok(ChunkData::CompositeDrawableEffectList(
+                CompositeDrawableEffectList::parse(bytes, typ)?,
+            )),
+            ChunkType::CompositeDrawableProp => Ok(ChunkData::CompositeDrawableProp(
+                Name::parse(bytes, typ)?,
+                CompositeDrawableProp::parse(bytes, typ)?,
+            )),
+            ChunkType::CompositeDrawablePropList => Ok(ChunkData::CompositeDrawablePropList(
+                CompositeDrawablePropList::parse(bytes, typ)?,
+            )),
+            ChunkType::CompositeDrawableSkin => Ok(ChunkData::CompositeDrawableSkin(
+                Name::parse(bytes, typ)?,
+                CompositeDrawableSkin::parse(bytes, typ)?,
+            )),
+            ChunkType::CompositeDrawableSkinList => Ok(ChunkData::CompositeDrawableSkinList(
+                CompositeDrawableSkinList::parse(bytes, typ)?,
+            )),
+            ChunkType::CompositeDrawableSortOrder => Ok(ChunkData::CompositeDrawableSortOrder(
+                CompositeDrawableSortOrder::parse(bytes, typ)?,
+            )),
             // -- Other produces error -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
         }
