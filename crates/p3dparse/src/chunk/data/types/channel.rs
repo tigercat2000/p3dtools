@@ -66,6 +66,23 @@ impl Channel {
             values: ChannelValues::Vector2OF(mapping, constants, values),
         })
     }
+
+    fn parse_bool(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let param = helpers::pure3d_read_fourcc(bytes)?;
+        let start_state = bytes.get_u16_le();
+        let frame_count = bytes.get_u32_le() as usize;
+
+        let mut values = Vec::with_capacity(frame_count);
+        for _ in 0..frame_count {
+            values.push(bytes.get_u16_le());
+        }
+
+        Ok(Channel {
+            param,
+            frames: Vec::new(),
+            values: ChannelValues::Bool(start_state, values),
+        })
+    }
 }
 
 impl Parse for Channel {
@@ -73,6 +90,7 @@ impl Parse for Channel {
         match typ {
             ChunkType::Vector1DOFChannel => return Channel::parse_vector1dof(bytes, typ),
             ChunkType::Vector2DOFChannel => return Channel::parse_vector2dof(bytes, typ),
+            ChunkType::BoolChannel => return Channel::parse_bool(bytes, typ),
             _ => {}
         }
 
@@ -176,6 +194,7 @@ pub enum ChannelValues {
     Vector3OF(Vec<Vector3>),
     Quaternion(Vec<Quaternion>),
     Colour(Vec<Colour>),
+    Bool(u16, Vec<u16>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]

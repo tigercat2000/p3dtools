@@ -183,7 +183,8 @@ impl ChunkData {
             | ChunkType::Vector2DOFChannel
             | ChunkType::Vector3DOFChannel
             | ChunkType::QuaternionChannel
-            | ChunkType::ColourChannel => Ok(ChunkData::Channel(
+            | ChunkType::ColourChannel
+            | ChunkType::BoolChannel => Ok(ChunkData::Channel(
                 Version::parse(bytes, typ)?,
                 Channel::parse(bytes, typ)?,
             )),
