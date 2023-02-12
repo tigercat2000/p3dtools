@@ -1,6 +1,8 @@
-use super::super::parse_trait::Parse;
 use crate::{
-    chunk::{data::helpers::pure3d_read_string, types::ChunkType},
+    chunk::{
+        data::{helpers::pure3d_read_string, parse_trait::Parse},
+        types::ChunkType,
+    },
     Result,
 };
 use bytes::Bytes;

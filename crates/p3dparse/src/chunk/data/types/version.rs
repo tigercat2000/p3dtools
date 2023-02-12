@@ -1,5 +1,7 @@
-use super::super::parse_trait::Parse;
-use crate::{chunk::types::ChunkType, Result};
+use crate::{
+    chunk::{data::parse_trait::Parse, types::ChunkType},
+    Result,
+};
 use bytes::{Buf, Bytes};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]

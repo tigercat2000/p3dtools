@@ -1,6 +1,10 @@
 use crate::{
     chunk::{
-        data::{helpers, parse_trait::Parse, types::shared::Vector3},
+        data::{
+            helpers,
+            parse_trait::Parse,
+            types::shared::{Vector2, Vector3},
+        },
         types::ChunkType,
     },
     Result,
@@ -86,5 +90,27 @@ impl Parse for PositionList {
         }
 
         Ok(PositionList { positions })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[allow(non_snake_case)]
+pub struct UVList {
+    pub channel: u32,
+    pub UVs: Vec<Vector2>,
+}
+
+impl Parse for UVList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.get_u32_le() as usize;
+        let channel = bytes.get_u32_le();
+
+        #[allow(non_snake_case)]
+        let mut UVs = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            UVs.push(helpers::read_vec2(bytes)?);
+        }
+
+        Ok(UVList { channel, UVs })
     }
 }

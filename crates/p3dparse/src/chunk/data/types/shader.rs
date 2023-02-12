@@ -1,6 +1,8 @@
-use super::super::parse_trait::Parse;
 use crate::{
-    chunk::{data::helpers, types::ChunkType},
+    chunk::{
+        data::{helpers, parse_trait::Parse},
+        types::ChunkType,
+    },
     Result,
 };
 use bytes::{Buf, Bytes};
