@@ -21,7 +21,10 @@ use self::{
 };
 
 use crate::{
-    chunk::{data::types::mesh::UVList, types::ChunkType},
+    chunk::{
+        data::types::mesh::{ColourList, IndexList, UVList},
+        types::ChunkType,
+    },
     Result,
 };
 use bytes::Bytes;
@@ -70,6 +73,8 @@ pub enum ChunkData {
     OldPrimGroup(Version, OldPrimGroup),
     PositionList(PositionList),
     UVList(UVList),
+    ColourList(ColourList),
+    IndexList(IndexList),
     Unknown,
 }
 
@@ -218,6 +223,8 @@ impl ChunkData {
                 Ok(ChunkData::PositionList(PositionList::parse(bytes, typ)?))
             }
             ChunkType::UVList => Ok(ChunkData::UVList(UVList::parse(bytes, typ)?)),
+            ChunkType::ColourList => Ok(ChunkData::ColourList(ColourList::parse(bytes, typ)?)),
+            ChunkType::IndexList => Ok(ChunkData::IndexList(IndexList::parse(bytes, typ)?)),
             // -- Other produces error -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
         }

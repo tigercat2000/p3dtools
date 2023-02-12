@@ -3,7 +3,7 @@ use crate::{
         data::{
             helpers,
             parse_trait::Parse,
-            types::shared::{Vector2, Vector3},
+            types::shared::{Colour, Vector2, Vector3},
         },
         types::ChunkType,
     },
@@ -112,5 +112,41 @@ impl Parse for UVList {
         }
 
         Ok(UVList { channel, UVs })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ColourList {
+    pub colours: Vec<Colour>,
+}
+
+impl Parse for ColourList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.get_u32_le() as usize;
+
+        let mut colours = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            colours.push(helpers::read_colour(bytes)?);
+        }
+
+        Ok(ColourList { colours })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct IndexList {
+    pub indices: Vec<u32>,
+}
+
+impl Parse for IndexList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.get_u32_le() as usize;
+
+        let mut indices = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            indices.push(bytes.get_u32_le());
+        }
+
+        Ok(IndexList { indices })
     }
 }
