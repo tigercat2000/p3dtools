@@ -1,6 +1,7 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 /// Directly stolen from LucasStuff.Radical
+/// And the Simpsons Hit & Run Source code leak!
 #[repr(u32)]
 #[derive(IntoPrimitive, TryFromPrimitive, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[allow(clippy::upper_case_acronyms)]
