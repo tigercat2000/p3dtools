@@ -8,7 +8,7 @@ use crate::{
 use bytes::{Buf, Bytes};
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct OldParticleSystem {
+pub struct OldParticleSystemFactory {
     pub framerate: f32,
     pub num_anim_frames: u32,
     pub num_ol_frames: u32,
@@ -17,9 +17,9 @@ pub struct OldParticleSystem {
     pub num_emitters: u32,
 }
 
-impl Parse for OldParticleSystem {
+impl Parse for OldParticleSystemFactory {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(OldParticleSystem {
+        Ok(OldParticleSystemFactory {
             framerate: bytes.get_f32_le(),
             num_anim_frames: bytes.get_u32_le(),
             num_ol_frames: bytes.get_u32_le(),
@@ -83,14 +83,27 @@ impl Parse for OldBaseEmitter {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct WorldEffect {
+pub struct OldParticleSystem {
     pub unknown: String,
 }
 
-impl Parse for WorldEffect {
+impl Parse for OldParticleSystem {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(WorldEffect {
+        Ok(OldParticleSystem {
             unknown: helpers::pure3d_read_string(bytes)?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct OldParticleSystemInstancingInfo {
+    pub max_instances: u32,
+}
+
+impl Parse for OldParticleSystemInstancingInfo {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(OldParticleSystemInstancingInfo {
+            max_instances: bytes.get_u32_le(),
         })
     }
 }

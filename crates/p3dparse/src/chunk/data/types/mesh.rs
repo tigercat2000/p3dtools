@@ -419,3 +419,31 @@ impl Parse for MultiControllerTrack {
         })
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct StaticWorldMesh {
+    pub render_order: u32,
+}
+
+impl Parse for StaticWorldMesh {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(StaticWorldMesh {
+            render_order: bytes.get_u32_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BreakableDrawable {
+    pub version: u8,
+    pub has_alpha: u8,
+}
+
+impl Parse for BreakableDrawable {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(BreakableDrawable {
+            version: bytes.get_u8(),
+            has_alpha: bytes.get_u8(),
+        })
+    }
+}

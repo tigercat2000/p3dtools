@@ -3,7 +3,7 @@ use self::{
     types::{
         animation::{Animation, AnimationGroup, AnimationGroupList, AnimationSize},
         channel::{Channel, ChannelInterpolation},
-        explosion::ExplosionEffect,
+        explosion::BreakableObject,
         image::{Image, ImageRaw},
         mesh::{Mesh, OldPrimGroup, PositionList},
         name::Name,
@@ -11,7 +11,9 @@ use self::{
             OldBillboardDisplayInfo, OldBillboardPerspectiveInfo, OldBillboardQuad,
             OldBillboardQuadGroup,
         },
-        old_particle_system::{OldBaseEmitter, OldParticleSystem, OldSpriteEmitter, WorldEffect},
+        old_particle_system::{
+            OldBaseEmitter, OldParticleSystem, OldParticleSystemFactory, OldSpriteEmitter,
+        },
         shader::{Shader, VertexShader},
         shader_param::ShaderParam,
         skeleton::{Skeleton, SkeletonJoint, SkeletonJointBonePreserve, SkeletonJointMirrorMap},
@@ -22,13 +24,16 @@ use self::{
 
 use crate::{
     chunk::{
-        data::types::mesh::{
-            AnimatedObject, AnimatedObjectAnimation, AnimatedObjectFactory, BoundingBox,
-            BoundingSphere, ColourList, CompositeDrawable, CompositeDrawableEffect,
-            CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
-            CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
-            IndexList, MultiController, MultiControllerTracks, OldFrameController, RenderStatus,
-            UVList,
+        data::types::{
+            mesh::{
+                AnimatedObject, AnimatedObjectAnimation, AnimatedObjectFactory, BoundingBox,
+                BoundingSphere, BreakableDrawable, ColourList, CompositeDrawable,
+                CompositeDrawableEffect, CompositeDrawableEffectList, CompositeDrawableProp,
+                CompositeDrawablePropList, CompositeDrawableSkin, CompositeDrawableSkinList,
+                CompositeDrawableSortOrder, IndexList, MultiController, MultiControllerTracks,
+                OldFrameController, RenderStatus, StaticWorldMesh, UVList,
+            },
+            old_particle_system::OldParticleSystemInstancingInfo,
         },
         types::ChunkType,
     },
@@ -42,6 +47,7 @@ mod parse_trait;
 mod types;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug)]
+#[allow(dead_code)]
 pub enum ChunkData {
     None,
     // -- Rendering -- //
@@ -52,10 +58,14 @@ pub enum ChunkData {
     ShaderParam(ShaderParam),
     VertexShader(VertexShader),
     // -- Old Particle System -- //
-    OldParticleSystem(Version, Name, OldParticleSystem),
+    OldParticleSystemFactory(Version, Name, OldParticleSystemFactory),
+    OldParticleInstancingInfo(Version, OldParticleSystemInstancingInfo),
+    OldParticleAnimation(Version),
+    OldEmitterAnimation(Version),
+    OldGeneratorAnimation(Version),
     OldSpriteEmitter(Version, Name, OldSpriteEmitter),
     OldBaseEmitter(Version, Name, OldBaseEmitter),
-    WorldEffect(Version, Name, WorldEffect),
+    OldParticleSystem(Version, Name, OldParticleSystem),
     // -- Animations -- //
     Animation(Version, Name, Animation),
     AnimationSize(Version, AnimationSize),
@@ -68,8 +78,8 @@ pub enum ChunkData {
     OldBillboardQuadGroup(Version, Name, OldBillboardQuadGroup),
     OldBillboardDisplayInfo(Version, OldBillboardDisplayInfo),
     OldBillboardPerspectiveInfo(Version, OldBillboardPerspectiveInfo),
-    // -- Explosion FX -- //
-    ExplosionEffectType(ExplosionEffect),
+    // -- Breakable Objects -- //
+    BreakableObject(BreakableObject),
     // -- Skeleton -- //
     Skeleton(Name, Version, Skeleton),
     SkeletonJoint(Name, SkeletonJoint),
@@ -99,13 +109,15 @@ pub enum ChunkData {
     OldFrameController(Version, Name, OldFrameController),
     MultiController(Name, Version, MultiController),
     MultiControllerTracks(MultiControllerTracks),
+    StaticWorldMesh(Name, Version, StaticWorldMesh),
+    BreakableDrawable(Name, BreakableDrawable),
     Unknown,
 }
 
 impl ChunkData {
     pub fn from_chunk_type(typ: ChunkType, bytes: &mut Bytes) -> Result<ChunkData> {
         match typ {
-            ChunkType::Root => Ok(ChunkData::None),
+            ChunkType::DataFile => Ok(ChunkData::None),
             // -- Rendering -- //
             ChunkType::Texture => Ok(ChunkData::Texture(
                 Name::parse(bytes, typ)?,
@@ -133,15 +145,25 @@ impl ChunkData {
                 Ok(ChunkData::VertexShader(VertexShader::parse(bytes, typ)?))
             }
             // -- Old Particle System -- //
-            ChunkType::OldParticleSystem => Ok(ChunkData::OldParticleSystem(
+            ChunkType::OldParticleSystemFactory => Ok(ChunkData::OldParticleSystemFactory(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
-                OldParticleSystem::parse(bytes, typ)?,
+                OldParticleSystemFactory::parse(bytes, typ)?,
             )),
             // Ignore these chunks
-            ChunkType::OldParticleInstancingInfo | ChunkType::OldParticleAnimation => {
-                Ok(ChunkData::Unknown)
+            ChunkType::OldParticleInstancingInfo => Ok(ChunkData::OldParticleInstancingInfo(
+                Version::parse(bytes, typ)?,
+                OldParticleSystemInstancingInfo::parse(bytes, typ)?,
+            )),
+            ChunkType::OldParticleAnimation => {
+                Ok(ChunkData::OldParticleAnimation(Version::parse(bytes, typ)?))
             }
+            ChunkType::OldEmitterAnimation => {
+                Ok(ChunkData::OldEmitterAnimation(Version::parse(bytes, typ)?))
+            }
+            ChunkType::OldGeneratorAnimation => Ok(ChunkData::OldGeneratorAnimation(
+                Version::parse(bytes, typ)?,
+            )),
             ChunkType::OldSpriteEmitter => Ok(ChunkData::OldSpriteEmitter(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
@@ -152,10 +174,10 @@ impl ChunkData {
                 Name::parse(bytes, typ)?,
                 OldBaseEmitter::parse(bytes, typ)?,
             )),
-            ChunkType::WorldEffect => Ok(ChunkData::WorldEffect(
+            ChunkType::OldParticleSystem => Ok(ChunkData::OldParticleSystem(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
-                WorldEffect::parse(bytes, typ)?,
+                OldParticleSystem::parse(bytes, typ)?,
             )),
             // -- Animations -- //
             ChunkType::Animation => Ok(ChunkData::Animation(
@@ -192,9 +214,6 @@ impl ChunkData {
                 Version::parse(bytes, typ)?,
                 ChannelInterpolation::parse(bytes, typ)?,
             )),
-            ChunkType::OldEmitterAnimation | ChunkType::OldGeneratorAnimation => {
-                Ok(ChunkData::None)
-            }
             // -- Old Billboards -- //
             ChunkType::OldBillboardQuad => Ok(ChunkData::OldBillboardQuad(
                 Version::parse(bytes, typ)?,
@@ -215,23 +234,23 @@ impl ChunkData {
                 OldBillboardPerspectiveInfo::parse(bytes, typ)?,
             )),
             // -- Explosion FX -- //
-            ChunkType::ExplosionEffectType => Ok(ChunkData::ExplosionEffectType(
-                ExplosionEffect::parse(bytes, typ)?,
-            )),
+            ChunkType::BreakableObject => Ok(ChunkData::BreakableObject(BreakableObject::parse(
+                bytes, typ,
+            )?)),
             // -- Skeleton -- //
-            ChunkType::Skeleton => Ok(ChunkData::Skeleton(
+            ChunkType::P3DSkeleton => Ok(ChunkData::Skeleton(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
                 Skeleton::parse(bytes, typ)?,
             )),
-            ChunkType::SkeletonJoint => Ok(ChunkData::SkeletonJoint(
+            ChunkType::P3DSkeletonJoint => Ok(ChunkData::SkeletonJoint(
                 Name::parse(bytes, typ)?,
                 SkeletonJoint::parse(bytes, typ)?,
             )),
-            ChunkType::SkeletonJointMirrorMap => Ok(ChunkData::SkeletonJointMirrorMap(
+            ChunkType::P3DSkeletonJointMirrorMap => Ok(ChunkData::SkeletonJointMirrorMap(
                 SkeletonJointMirrorMap::parse(bytes, typ)?,
             )),
-            ChunkType::SkeletonJointBonePreserve => Ok(ChunkData::SkeletonJointBonePreserve(
+            ChunkType::P3DSkeletonJointBonePreserve => Ok(ChunkData::SkeletonJointBonePreserve(
                 SkeletonJointBonePreserve::parse(bytes, typ)?,
             )),
             // -- Mesh -- //
@@ -257,32 +276,34 @@ impl ChunkData {
             ChunkType::RenderStatus => {
                 Ok(ChunkData::RenderStatus(RenderStatus::parse(bytes, typ)?))
             }
-            ChunkType::CompositeDrawable => Ok(ChunkData::CompositeDrawable(
+            ChunkType::P3DCompositeDrawable => Ok(ChunkData::CompositeDrawable(
                 Name::parse(bytes, typ)?,
                 CompositeDrawable::parse(bytes, typ)?,
             )),
-            ChunkType::CompositeDrawableEffect => Ok(ChunkData::CompositeDrawableEffect(
+            ChunkType::P3DCompositeDrawableEffect => Ok(ChunkData::CompositeDrawableEffect(
                 Name::parse(bytes, typ)?,
                 CompositeDrawableEffect::parse(bytes, typ)?,
             )),
-            ChunkType::CompositeDrawableEffectList => Ok(ChunkData::CompositeDrawableEffectList(
-                CompositeDrawableEffectList::parse(bytes, typ)?,
-            )),
-            ChunkType::CompositeDrawableProp => Ok(ChunkData::CompositeDrawableProp(
+            ChunkType::P3DCompositeDrawableEffectList => {
+                Ok(ChunkData::CompositeDrawableEffectList(
+                    CompositeDrawableEffectList::parse(bytes, typ)?,
+                ))
+            }
+            ChunkType::P3DCompositeDrawableProp => Ok(ChunkData::CompositeDrawableProp(
                 Name::parse(bytes, typ)?,
                 CompositeDrawableProp::parse(bytes, typ)?,
             )),
-            ChunkType::CompositeDrawablePropList => Ok(ChunkData::CompositeDrawablePropList(
+            ChunkType::P3DCompositeDrawablePropList => Ok(ChunkData::CompositeDrawablePropList(
                 CompositeDrawablePropList::parse(bytes, typ)?,
             )),
-            ChunkType::CompositeDrawableSkin => Ok(ChunkData::CompositeDrawableSkin(
+            ChunkType::P3DCompositeDrawableSkin => Ok(ChunkData::CompositeDrawableSkin(
                 Name::parse(bytes, typ)?,
                 CompositeDrawableSkin::parse(bytes, typ)?,
             )),
-            ChunkType::CompositeDrawableSkinList => Ok(ChunkData::CompositeDrawableSkinList(
+            ChunkType::P3DCompositeDrawableSkinList => Ok(ChunkData::CompositeDrawableSkinList(
                 CompositeDrawableSkinList::parse(bytes, typ)?,
             )),
-            ChunkType::CompositeDrawableSortOrder => Ok(ChunkData::CompositeDrawableSortOrder(
+            ChunkType::P3DCompositeDrawableSortOrder => Ok(ChunkData::CompositeDrawableSortOrder(
                 CompositeDrawableSortOrder::parse(bytes, typ)?,
             )),
             ChunkType::AnimatedObjectFactory => Ok(ChunkData::AnimatedObjectFactory(
@@ -305,16 +326,36 @@ impl ChunkData {
                 Name::parse(bytes, typ)?,
                 OldFrameController::parse(bytes, typ)?,
             )),
-            ChunkType::MultiController => Ok(ChunkData::MultiController(
+            ChunkType::P3DMultiController => Ok(ChunkData::MultiController(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
                 MultiController::parse(bytes, typ)?,
             )),
-            ChunkType::MultiControllerTracks => Ok(ChunkData::MultiControllerTracks(
+            ChunkType::P3DMultiControllerTracks => Ok(ChunkData::MultiControllerTracks(
                 MultiControllerTracks::parse(bytes, typ)?,
             )),
-            // -- Other produces error -- //
+            ChunkType::EntityDSG | ChunkType::InstanceableAnimatedDynamicPhysicsDSG => {
+                Ok(ChunkData::StaticWorldMesh(
+                    Name::parse(bytes, typ)?,
+                    Version::parse(bytes, typ)?,
+                    StaticWorldMesh::parse(bytes, typ)?,
+                ))
+            }
+            ChunkType::AnimatedObjectDSGWrapper => Ok(ChunkData::BreakableDrawable(
+                Name::parse(bytes, typ)?,
+                BreakableDrawable::parse(bytes, typ)?,
+            )),
+            // -- Other produces error (eventually will produce Unknown) -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
+        }
+    }
+
+    pub fn get_name(&self) -> String {
+        match self {
+            ChunkData::OldBaseEmitter(_, name, _) => name.name.clone(),
+            ChunkData::OldSpriteEmitter(_, name, _) => name.name.clone(),
+            ChunkData::OldParticleSystemFactory(_, name, _) => name.name.clone(),
+            _ => "".into(),
         }
     }
 }
