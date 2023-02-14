@@ -670,6 +670,7 @@ pub enum ChunkType {
     WalkerCameraData = 0x03000101,
     /// Originally RandomTexture
     SFXChunkSet = 0x03000110,
+    /// Originally CollisionEffect
     ObjectAttributes = 0x03000600,
     PhysicsWrapper = 0x03000601,
     AttributeTable = 0x03000602,

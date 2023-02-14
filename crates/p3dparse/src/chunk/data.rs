@@ -25,15 +25,30 @@ use self::{
 use crate::{
     chunk::{
         data::types::{
+            collision::{
+                CollisionBoundingBox, CollisionObject, CollisionObjectAttribute,
+                CollisionOblongBox, CollisionVector, CollisionVolume, CollisionVolumeOwner,
+            },
             mesh::{
-                AnimatedObject, AnimatedObjectAnimation, AnimatedObjectFactory, BoundingBox,
-                BoundingSphere, BreakableDrawable, ColourList, CompositeDrawable,
-                CompositeDrawableEffect, CompositeDrawableEffectList, CompositeDrawableProp,
-                CompositeDrawablePropList, CompositeDrawableSkin, CompositeDrawableSkinList,
-                CompositeDrawableSortOrder, IndexList, MultiController, MultiControllerTracks,
-                OldFrameController, RenderStatus, StaticWorldMesh, UVList,
+                ColourList, CompositeDrawable, CompositeDrawableEffect,
+                CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
+                CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
+                IndexList, RenderStatus, UVList,
+            },
+            object::{
+                AnimatedObject, AnimatedObjectAnimation, AnimatedObjectDSGWrapper,
+                AnimatedObjectFactory, MultiController, MultiControllerTracks, ObjectDSG,
+                OldFrameController,
             },
             old_particle_system::OldParticleSystemInstancingInfo,
+            physics::{
+                BoundingBox, BoundingSphere, PhysicsInertiaMatrix, PhysicsJoint, PhysicsObject,
+                PhysicsVector,
+            },
+            prop_state::{
+                ObjectAttributes, StatePropCallbackData, StatePropDataV1, StatePropEventData,
+                StatePropFrameControllerData, StatePropStateDataV1, StatePropVisibilitiesData,
+            },
         },
         types::ChunkType,
     },
@@ -109,8 +124,31 @@ pub enum ChunkData {
     OldFrameController(Version, Name, OldFrameController),
     MultiController(Name, Version, MultiController),
     MultiControllerTracks(MultiControllerTracks),
-    StaticWorldMesh(Name, Version, StaticWorldMesh),
-    BreakableDrawable(Name, BreakableDrawable),
+    ObjectDSG(Name, Version, ObjectDSG),
+    AnimatedObjectDSGWrapper(Name, AnimatedObjectDSGWrapper),
+    // -- Physics -- //
+    PhysicsObject(Name, Version, PhysicsObject),
+    PhysicsJoint(PhysicsJoint),
+    PhysicsVector(PhysicsVector),
+    PhysicsInertiaMatrix(PhysicsInertiaMatrix),
+    // -- Collision -- //
+    CollisionObject(Name, Version, CollisionObject),
+    CollisionVolume(CollisionVolume),
+    CollisionVolumeOwner(CollisionVolumeOwner),
+    CollisionVolumeOwnerName(Name),
+    CollisionBoundingBox(CollisionBoundingBox),
+    CollisionOblongBox(CollisionOblongBox),
+    CollisionVector(CollisionVector),
+    CollisionObjectAttribute(CollisionObjectAttribute),
+    // -- Prop Data -- //
+    StatePropDataV1(Version, Name, StatePropDataV1),
+    StatePropStateDataV1(Name, StatePropStateDataV1),
+    StatePropVisibilitiesData(Name, StatePropVisibilitiesData),
+    StatePropFrameControllerData(Name, StatePropFrameControllerData),
+    StatePropEventData(Name, StatePropEventData),
+    StatePropCallbackData(Name, StatePropCallbackData),
+    PropInstanceList(Name),
+    ObjectAttributes(ObjectAttributes),
     Unknown,
 }
 
@@ -335,16 +373,87 @@ impl ChunkData {
                 MultiControllerTracks::parse(bytes, typ)?,
             )),
             ChunkType::EntityDSG | ChunkType::InstanceableAnimatedDynamicPhysicsDSG => {
-                Ok(ChunkData::StaticWorldMesh(
+                Ok(ChunkData::ObjectDSG(
                     Name::parse(bytes, typ)?,
                     Version::parse(bytes, typ)?,
-                    StaticWorldMesh::parse(bytes, typ)?,
+                    ObjectDSG::parse(bytes, typ)?,
                 ))
             }
-            ChunkType::AnimatedObjectDSGWrapper => Ok(ChunkData::BreakableDrawable(
+            ChunkType::AnimatedObjectDSGWrapper => Ok(ChunkData::AnimatedObjectDSGWrapper(
                 Name::parse(bytes, typ)?,
-                BreakableDrawable::parse(bytes, typ)?,
+                AnimatedObjectDSGWrapper::parse(bytes, typ)?,
             )),
+            ChunkType::PhysicsObject => Ok(ChunkData::PhysicsObject(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                PhysicsObject::parse(bytes, typ)?,
+            )),
+            ChunkType::PhysicsJoint => {
+                Ok(ChunkData::PhysicsJoint(PhysicsJoint::parse(bytes, typ)?))
+            }
+            ChunkType::PhysicsVector => {
+                Ok(ChunkData::PhysicsVector(PhysicsVector::parse(bytes, typ)?))
+            }
+            ChunkType::PhysicsInertiaMatrix => Ok(ChunkData::PhysicsInertiaMatrix(
+                PhysicsInertiaMatrix::parse(bytes, typ)?,
+            )),
+            ChunkType::CollisionObject => Ok(ChunkData::CollisionObject(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                CollisionObject::parse(bytes, typ)?,
+            )),
+            ChunkType::CollisionVolume => Ok(ChunkData::CollisionVolume(CollisionVolume::parse(
+                bytes, typ,
+            )?)),
+            ChunkType::CollisionVolumeOwner => Ok(ChunkData::CollisionVolumeOwner(
+                CollisionVolumeOwner::parse(bytes, typ)?,
+            )),
+            ChunkType::CollisionVolumeOwnerName => Ok(ChunkData::CollisionVolumeOwnerName(
+                Name::parse(bytes, typ)?,
+            )),
+            ChunkType::CollisionBoundingBox => Ok(ChunkData::CollisionBoundingBox(
+                CollisionBoundingBox::parse(bytes, typ)?,
+            )),
+            ChunkType::CollisionOblongBox => Ok(ChunkData::CollisionOblongBox(
+                CollisionOblongBox::parse(bytes, typ)?,
+            )),
+            ChunkType::CollisionVector => Ok(ChunkData::CollisionVector(CollisionVector::parse(
+                bytes, typ,
+            )?)),
+            ChunkType::CollisionObjectAttribute => Ok(ChunkData::CollisionObjectAttribute(
+                CollisionObjectAttribute::parse(bytes, typ)?,
+            )),
+            ChunkType::StatePropDataV1 => Ok(ChunkData::StatePropDataV1(
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                StatePropDataV1::parse(bytes, typ)?,
+            )),
+            ChunkType::StatePropStateDataV1 => Ok(ChunkData::StatePropStateDataV1(
+                Name::parse(bytes, typ)?,
+                StatePropStateDataV1::parse(bytes, typ)?,
+            )),
+            ChunkType::StatePropVisibilitiesData => Ok(ChunkData::StatePropVisibilitiesData(
+                Name::parse(bytes, typ)?,
+                StatePropVisibilitiesData::parse(bytes, typ)?,
+            )),
+            ChunkType::StatePropFrameControllerData => Ok(ChunkData::StatePropFrameControllerData(
+                Name::parse(bytes, typ)?,
+                StatePropFrameControllerData::parse(bytes, typ)?,
+            )),
+            ChunkType::StatePropEventData => Ok(ChunkData::StatePropEventData(
+                Name::parse(bytes, typ)?,
+                StatePropEventData::parse(bytes, typ)?,
+            )),
+            ChunkType::StatePropCallbackData => Ok(ChunkData::StatePropCallbackData(
+                Name::parse(bytes, typ)?,
+                StatePropCallbackData::parse(bytes, typ)?,
+            )),
+            ChunkType::ObjectAttributes => Ok(ChunkData::ObjectAttributes(
+                ObjectAttributes::parse(bytes, typ)?,
+            )),
+            ChunkType::PropInstanceList => {
+                Ok(ChunkData::PropInstanceList(Name::parse(bytes, typ)?))
+            }
             // -- Other produces error (eventually will produce Unknown) -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
         }

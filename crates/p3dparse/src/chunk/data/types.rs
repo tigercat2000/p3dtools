@@ -1,11 +1,15 @@
 pub mod animation;
 pub mod channel;
+pub mod collision;
 pub mod explosion;
 pub mod image;
 pub mod mesh;
 pub mod name;
+pub mod object;
 pub mod old_billboard;
 pub mod old_particle_system;
+pub mod physics;
+pub mod prop_state;
 pub mod shader;
 pub mod shader_param;
 pub mod shared;

@@ -1,7 +1,7 @@
 use crate::{
     chunk::{
         data::{
-            helpers::{self, pure3d_read_string},
+            helpers::{pure3d_read_string, read_colour, read_vec2, read_vec3},
             parse_trait::Parse,
             types::shared::{Colour, Vector2, Vector3},
         },
@@ -86,7 +86,7 @@ impl Parse for PositionList {
 
         let mut positions = Vec::with_capacity(capacity);
         for _ in 0..capacity {
-            positions.push(helpers::read_vec3(bytes)?);
+            positions.push(read_vec3(bytes)?);
         }
 
         Ok(PositionList { positions })
@@ -108,7 +108,7 @@ impl Parse for UVList {
         #[allow(non_snake_case)]
         let mut UVs = Vec::with_capacity(capacity);
         for _ in 0..capacity {
-            UVs.push(helpers::read_vec2(bytes)?);
+            UVs.push(read_vec2(bytes)?);
         }
 
         Ok(UVList { channel, UVs })
@@ -126,7 +126,7 @@ impl Parse for ColourList {
 
         let mut colours = Vec::with_capacity(capacity);
         for _ in 0..capacity {
-            colours.push(helpers::read_colour(bytes)?);
+            colours.push(read_colour(bytes)?);
         }
 
         Ok(ColourList { colours })
@@ -148,36 +148,6 @@ impl Parse for IndexList {
         }
 
         Ok(IndexList { indices })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct BoundingBox {
-    pub low: Vector3,
-    pub high: Vector3,
-}
-
-impl Parse for BoundingBox {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(BoundingBox {
-            low: helpers::read_vec3(bytes)?,
-            high: helpers::read_vec3(bytes)?,
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct BoundingSphere {
-    pub centre: Vector3,
-    pub radius: f32,
-}
-
-impl Parse for BoundingSphere {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(BoundingSphere {
-            centre: helpers::read_vec3(bytes)?,
-            radius: bytes.get_f32_le(),
-        })
     }
 }
 
@@ -298,152 +268,6 @@ impl Parse for CompositeDrawableSortOrder {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawableSortOrder {
             sort_order: bytes.get_f32_le(),
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AnimatedObjectFactory {
-    pub factory_name: String,
-    pub num_animations: u32,
-}
-
-impl Parse for AnimatedObjectFactory {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(AnimatedObjectFactory {
-            factory_name: pure3d_read_string(bytes)?,
-            num_animations: bytes.get_u32_le(),
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AnimatedObject {
-    pub factory_name: String,
-    pub starting_animation: u32,
-}
-
-impl Parse for AnimatedObject {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(AnimatedObject {
-            factory_name: pure3d_read_string(bytes)?,
-            starting_animation: bytes.get_u32_le(),
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct AnimatedObjectAnimation {
-    pub frame_rate: f32,
-    pub num_old_frame_controllers: u32,
-}
-
-impl Parse for AnimatedObjectAnimation {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(AnimatedObjectAnimation {
-            frame_rate: bytes.get_f32_le(),
-            num_old_frame_controllers: bytes.get_u32_le(),
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct OldFrameController {
-    pub type2: String,
-    pub frame_offset: f32,
-    pub hierarchy_name: String,
-    pub animation_name: String,
-}
-
-impl Parse for OldFrameController {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(OldFrameController {
-            type2: helpers::pure3d_read_fourcc(bytes)?,
-            frame_offset: bytes.get_f32_le(),
-            hierarchy_name: pure3d_read_string(bytes)?,
-            animation_name: pure3d_read_string(bytes)?,
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct MultiController {
-    pub length: f32,
-    pub frame_rate: f32,
-    pub num_tracks: u32,
-}
-
-impl Parse for MultiController {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(MultiController {
-            length: bytes.get_f32_le(),
-            frame_rate: bytes.get_f32_le(),
-            num_tracks: bytes.get_u32_le(),
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct MultiControllerTracks {
-    pub tracks: Vec<MultiControllerTrack>,
-}
-
-impl Parse for MultiControllerTracks {
-    fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
-        let capacity = bytes.get_u32_le() as usize;
-
-        let mut tracks = Vec::with_capacity(capacity);
-        for _ in 0..capacity {
-            tracks.push(MultiControllerTrack::parse(bytes, typ)?);
-        }
-
-        Ok(MultiControllerTracks { tracks })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct MultiControllerTrack {
-    pub name: String,
-    pub start_time: f32,
-    pub end_time: f32,
-    pub scale: f32,
-}
-
-impl Parse for MultiControllerTrack {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(MultiControllerTrack {
-            name: pure3d_read_string(bytes)?,
-            start_time: bytes.get_f32_le(),
-            end_time: bytes.get_f32_le(),
-            scale: bytes.get_f32_le(),
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct StaticWorldMesh {
-    pub render_order: u32,
-}
-
-impl Parse for StaticWorldMesh {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(StaticWorldMesh {
-            render_order: bytes.get_u32_le(),
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BreakableDrawable {
-    pub version: u8,
-    pub has_alpha: u8,
-}
-
-impl Parse for BreakableDrawable {
-    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(BreakableDrawable {
-            version: bytes.get_u8(),
-            has_alpha: bytes.get_u8(),
         })
     }
 }
