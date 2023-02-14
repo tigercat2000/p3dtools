@@ -137,3 +137,53 @@ impl Parse for CollisionObjectAttribute {
         })
     }
 }
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[allow(non_snake_case)]
+pub struct IntersectDSG {
+    pub indices: Vec<u32>,
+    pub positions: Vec<Vector3>,
+    pub normals: Vec<Vector3>,
+}
+
+impl Parse for IntersectDSG {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let indices_len = bytes.get_u32_le();
+        let mut indices = Vec::with_capacity(indices_len as usize);
+        for _ in 0..indices_len {
+            indices.push(bytes.get_u32_le())
+        }
+        let positions_len = bytes.get_u32_le();
+        let mut positions = Vec::with_capacity(positions_len as usize);
+        for _ in 0..positions_len {
+            positions.push(read_vec3(bytes)?)
+        }
+        let normals_len = bytes.get_u32_le();
+        let mut normals = Vec::with_capacity(normals_len as usize);
+        for _ in 0..normals_len {
+            normals.push(read_vec3(bytes)?)
+        }
+        Ok(IntersectDSG {
+            indices,
+            positions,
+            normals,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(non_snake_case)]
+pub struct TerrainTypeList {
+    pub types: Vec<u8>,
+}
+
+impl Parse for TerrainTypeList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let types_len = bytes.get_u32_le();
+        let mut types = Vec::with_capacity(types_len as usize);
+        for _ in 0..types_len {
+            types.push(bytes.get_u8())
+        }
+        Ok(TerrainTypeList { types })
+    }
+}

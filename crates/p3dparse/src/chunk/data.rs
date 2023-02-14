@@ -8,6 +8,7 @@ use crate::{
                 collision::{
                     CollisionBoundingBox, CollisionObject, CollisionObjectAttribute,
                     CollisionOblongBox, CollisionVector, CollisionVolume, CollisionVolumeOwner,
+                    IntersectDSG, TerrainTypeList,
                 },
                 explosion::BreakableObject,
                 gameattr::{GameAttr, GameAttrParam},
@@ -145,6 +146,8 @@ pub enum ChunkData {
     CollisionOblongBox(CollisionOblongBox),
     CollisionVector(CollisionVector),
     CollisionObjectAttribute(CollisionObjectAttribute),
+    IntersectDSG(IntersectDSG),
+    TerrainTypeList(Version, TerrainTypeList),
     // -- Prop Data -- //
     StatePropDataV1(Version, Name, StatePropDataV1),
     StatePropStateDataV1(Name, StatePropStateDataV1),
@@ -447,6 +450,13 @@ impl ChunkData {
             )?)),
             ChunkType::CollisionObjectAttribute => Ok(ChunkData::CollisionObjectAttribute(
                 CollisionObjectAttribute::parse(bytes, typ)?,
+            )),
+            ChunkType::IntersectDSG => {
+                Ok(ChunkData::IntersectDSG(IntersectDSG::parse(bytes, typ)?))
+            }
+            ChunkType::TerrainTypeList => Ok(ChunkData::TerrainTypeList(
+                Version::parse(bytes, typ)?,
+                TerrainTypeList::parse(bytes, typ)?,
             )),
             ChunkType::StatePropDataV1 => Ok(ChunkData::StatePropDataV1(
                 Version::parse(bytes, typ)?,
