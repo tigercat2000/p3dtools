@@ -12,6 +12,7 @@ use crate::{
                 explosion::BreakableObject,
                 gameattr::{GameAttr, GameAttrParam},
                 image::{Image, ImageRaw},
+                locator::{WBLocator, WBMatrix, WBRail, WBSpline, WBTriggerVolume},
                 mesh::{
                     ColourList, CompositeDrawable, CompositeDrawableEffect,
                     CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
@@ -167,6 +168,12 @@ pub enum ChunkData {
     // -- GameAttr -- //
     GameAttr(Name, Version, GameAttr),
     GameAttrParam(GameAttrParam),
+    // -- Locator -- //
+    WBLocator(Name, WBLocator),
+    WBTriggerVolume(Name, WBTriggerVolume),
+    WBMatrix(WBMatrix),
+    WBSpline(Name, WBSpline),
+    WBRail(Name, WBRail),
     Unknown,
 }
 
@@ -525,6 +532,23 @@ impl ChunkData {
             | ChunkType::GameAttrMatrixParam => {
                 Ok(ChunkData::GameAttrParam(GameAttrParam::parse(bytes, typ)?))
             }
+            ChunkType::WBLocator => Ok(ChunkData::WBLocator(
+                Name::parse(bytes, typ)?,
+                WBLocator::parse(bytes, typ)?,
+            )),
+            ChunkType::WBTriggerVolume => Ok(ChunkData::WBTriggerVolume(
+                Name::parse(bytes, typ)?,
+                WBTriggerVolume::parse(bytes, typ)?,
+            )),
+            ChunkType::WBMatrix => Ok(ChunkData::WBMatrix(WBMatrix::parse(bytes, typ)?)),
+            ChunkType::WBSpline => Ok(ChunkData::WBSpline(
+                Name::parse(bytes, typ)?,
+                WBSpline::parse(bytes, typ)?,
+            )),
+            ChunkType::WBRail => Ok(ChunkData::WBRail(
+                Name::parse(bytes, typ)?,
+                WBRail::parse(bytes, typ)?,
+            )),
             // -- Other produces error (eventually will produce Unknown) -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
         }

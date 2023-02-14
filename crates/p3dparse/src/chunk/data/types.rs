@@ -4,6 +4,7 @@ pub mod collision;
 pub mod explosion;
 pub mod gameattr;
 pub mod image;
+pub mod locator;
 pub mod mesh;
 pub mod name;
 pub mod object;

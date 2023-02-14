@@ -654,16 +654,21 @@ pub enum ChunkType {
     RoadNodeSegment = 0x03000002,
     RoadNode = 0x03000003,
     IntersectionLocatorNode = 0x03000004,
-    SRR2Locator = 0x03000005,
-    TriggerVolume = 0x03000006,
-    Spline = 0x03000007,
+    /// Originally SRR2Locator
+    WBLocator = 0x03000005,
+    /// Originally TriggerVolume
+    WBTriggerVolume = 0x03000006,
+    /// Originally Spline
+    WBSpline = 0x03000007,
     PropInstanceList = 0x03000008,
     /// Originally CubeShape
     RoadSegmentData = 0x03000009,
-    Rail = 0x0300000A,
+    /// Originally Rail
+    WBRail = 0x0300000A,
     PedNode = 0x0300000B,
     /// Really "EXTRA_MATRIX"
-    SRR2LocatorMatrix = 0x0300000C,
+    /// Originally SRR2LocatorMatrix
+    WBMatrix = 0x0300000C,
     PedNodeSegment = 0x0300000D,
     TerrainTypeList = 0x0300000E,
     CarCameraData = 0x03000100,
