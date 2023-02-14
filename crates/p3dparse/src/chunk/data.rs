@@ -1,53 +1,51 @@
-use self::{
-    parse_trait::Parse,
-    types::{
-        animation::{Animation, AnimationGroup, AnimationGroupList, AnimationSize},
-        channel::{Channel, ChannelInterpolation},
-        explosion::BreakableObject,
-        image::{Image, ImageRaw},
-        mesh::{Mesh, OldPrimGroup, PositionList},
-        name::Name,
-        old_billboard::{
-            OldBillboardDisplayInfo, OldBillboardPerspectiveInfo, OldBillboardQuad,
-            OldBillboardQuadGroup,
-        },
-        old_particle_system::{
-            OldBaseEmitter, OldParticleSystem, OldParticleSystemFactory, OldSpriteEmitter,
-        },
-        shader::{Shader, VertexShader},
-        shader_param::ShaderParam,
-        skeleton::{Skeleton, SkeletonJoint, SkeletonJointBonePreserve, SkeletonJointMirrorMap},
-        texture::Texture,
-        version::Version,
-    },
-};
-
 use crate::{
     chunk::{
-        data::types::{
-            collision::{
-                CollisionBoundingBox, CollisionObject, CollisionObjectAttribute,
-                CollisionOblongBox, CollisionVector, CollisionVolume, CollisionVolumeOwner,
-            },
-            mesh::{
-                ColourList, CompositeDrawable, CompositeDrawableEffect,
-                CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
-                CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
-                IndexList, RenderStatus, UVList,
-            },
-            object::{
-                AnimatedObject, AnimatedObjectAnimation, AnimatedObjectDSGWrapper,
-                AnimatedObjectFactory, MultiController, MultiControllerTracks, ObjectDSG,
-                OldFrameController,
-            },
-            old_particle_system::OldParticleSystemInstancingInfo,
-            physics::{
-                BoundingBox, BoundingSphere, PhysicsInertiaMatrix, PhysicsJoint, PhysicsObject,
-                PhysicsVector,
-            },
-            prop_state::{
-                ObjectAttributes, StatePropCallbackData, StatePropDataV1, StatePropEventData,
-                StatePropFrameControllerData, StatePropStateDataV1, StatePropVisibilitiesData,
+        data::{
+            parse_trait::Parse,
+            types::{
+                animation::{Animation, AnimationGroup, AnimationGroupList, AnimationSize},
+                channel::{Channel, ChannelInterpolation},
+                collision::{
+                    CollisionBoundingBox, CollisionObject, CollisionObjectAttribute,
+                    CollisionOblongBox, CollisionVector, CollisionVolume, CollisionVolumeOwner,
+                },
+                explosion::BreakableObject,
+                image::{Image, ImageRaw},
+                mesh::{
+                    ColourList, CompositeDrawable, CompositeDrawableEffect,
+                    CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
+                    CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
+                    IndexList, Mesh, OldPrimGroup, PositionList, RenderStatus, UVList,
+                },
+                name::Name,
+                object::{
+                    AnimatedObject, AnimatedObjectAnimation, AnimatedObjectDSGWrapper,
+                    AnimatedObjectFactory, MultiController, MultiControllerTracks, ObjectDSG,
+                    OldFrameController,
+                },
+                old_billboard::{
+                    OldBillboardDisplayInfo, OldBillboardPerspectiveInfo, OldBillboardQuad,
+                    OldBillboardQuadGroup,
+                },
+                old_particle_system::{
+                    OldBaseEmitter, OldParticleSystem, OldParticleSystemFactory,
+                    OldParticleSystemInstancingInfo, OldSpriteEmitter,
+                },
+                physics::{
+                    BoundingBox, BoundingSphere, PhysicsInertiaMatrix, PhysicsJoint, PhysicsObject,
+                    PhysicsVector,
+                },
+                prop_state::{
+                    ObjectAttributes, StatePropCallbackData, StatePropDataV1, StatePropEventData,
+                    StatePropFrameControllerData, StatePropStateDataV1, StatePropVisibilitiesData,
+                },
+                shader::{Shader, VertexShader},
+                shader_param::ShaderParam,
+                skeleton::{
+                    Skeleton, SkeletonJoint, SkeletonJointBonePreserve, SkeletonJointMirrorMap,
+                },
+                texture::Texture,
+                version::Version,
             },
         },
         types::ChunkType,
