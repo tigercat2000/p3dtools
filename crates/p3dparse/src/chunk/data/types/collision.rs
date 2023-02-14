@@ -96,6 +96,37 @@ impl Parse for CollisionOblongBox {
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[allow(non_snake_case)]
+pub struct CollisionCylinder {
+    pub cylinder_radius: f32,
+    pub length: f32,
+    pub flat_end: u16,
+}
+
+impl Parse for CollisionCylinder {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CollisionCylinder {
+            cylinder_radius: bytes.get_f32_le(),
+            length: bytes.get_f32_le(),
+            flat_end: bytes.get_u16_le(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[allow(non_snake_case)]
+pub struct CollisionSphere {
+    pub radius: f32,
+}
+
+impl Parse for CollisionSphere {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(CollisionSphere {
+            radius: bytes.get_f32_le(),
+        })
+    }
+}
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[allow(non_snake_case)]
 pub struct CollisionVector {
     pub vector: Vector3,
 }

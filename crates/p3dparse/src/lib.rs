@@ -27,7 +27,7 @@ pub fn parse_file(mut file: Bytes) -> Result<()> {
 
     let root_chunk = Chunk::parse(&mut file, None)?;
 
-    println!("Root Chunk: {:?}", root_chunk);
+    // println!("Root Chunk: {:?}", root_chunk);
 
     Ok(())
 }

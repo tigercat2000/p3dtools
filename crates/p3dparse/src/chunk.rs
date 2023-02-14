@@ -74,18 +74,28 @@ impl Chunk {
         };
 
         // It's okay if we fail to parse a chunk because we always know the size and can keep our framing intact.
-        if !data_slice.is_empty() {
+        let byte_err = if !data_slice.is_empty() {
             eprintln!(
-                "Warning: Chunk {} was expected to parse {:?} bytes but only parsed {:?}, skipping this chunk's data",
-                get_lineage(&chunk), expected_parse_size, expected_parse_size - data_slice.len()
+                "Warning: Chunk {} was expected to parse {:?} bytes but only parsed {:?}, data result: {:#?}",
+                get_lineage(&chunk), expected_parse_size, expected_parse_size - data_slice.len(), chunk.data
             );
-        }
+            true
+        } else {
+            false
+        };
         // We parsed something, maybe an Unknown chunk, we need to move past it to keep framing intact.
         bytes.advance(expected_parse_size);
 
         // Indicates we have some children to parse.
         if total_size > data_size {
             let total_children_size = (total_size - data_size) as usize;
+            if byte_err {
+                eprintln!(
+                    "Chunk {} has an expected child size of {}",
+                    get_lineage(&chunk),
+                    total_children_size
+                );
+            }
             let mut parsed_so_far = 0;
             while parsed_so_far < total_children_size {
                 let before_parse = bytes.len();
@@ -93,6 +103,14 @@ impl Chunk {
                 let after_parse = bytes.len();
                 parsed_so_far += before_parse - after_parse;
             }
+        }
+
+        if byte_err {
+            eprintln!(
+                "Additional context for chunk {} with incomplete parse: {:#?}",
+                get_lineage(&chunk),
+                chunk
+            );
         }
 
         Ok(chunk)

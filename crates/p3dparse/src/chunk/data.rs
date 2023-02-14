@@ -6,9 +6,9 @@ use crate::{
                 animation::{Animation, AnimationGroup, AnimationGroupList, AnimationSize},
                 channel::{Channel, ChannelInterpolation},
                 collision::{
-                    CollisionBoundingBox, CollisionObject, CollisionObjectAttribute,
-                    CollisionOblongBox, CollisionVector, CollisionVolume, CollisionVolumeOwner,
-                    IntersectDSG, TerrainTypeList,
+                    CollisionBoundingBox, CollisionCylinder, CollisionObject,
+                    CollisionObjectAttribute, CollisionOblongBox, CollisionSphere, CollisionVector,
+                    CollisionVolume, CollisionVolumeOwner, IntersectDSG, TerrainTypeList,
                 },
                 explosion::BreakableObject,
                 gameattr::{GameAttr, GameAttrParam},
@@ -61,7 +61,6 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
-use eyre::eyre;
 
 mod helpers;
 mod parse_trait;
@@ -144,10 +143,13 @@ pub enum ChunkData {
     CollisionVolumeOwnerName(Name),
     CollisionBoundingBox(CollisionBoundingBox),
     CollisionOblongBox(CollisionOblongBox),
+    CollisionCylinder(CollisionCylinder),
+    CollisionSphere(CollisionSphere),
     CollisionVector(CollisionVector),
     CollisionObjectAttribute(CollisionObjectAttribute),
     IntersectDSG(IntersectDSG),
     TerrainTypeList(Version, TerrainTypeList),
+    StaticPhysicsDSG(Name, Version),
     // -- Prop Data -- //
     StatePropDataV1(Version, Name, StatePropDataV1),
     StatePropStateDataV1(Name, StatePropStateDataV1),
@@ -400,13 +402,14 @@ impl ChunkData {
             ChunkType::P3DMultiControllerTracks => Ok(ChunkData::MultiControllerTracks(
                 MultiControllerTracks::parse(bytes, typ)?,
             )),
-            ChunkType::EntityDSG | ChunkType::InstanceableAnimatedDynamicPhysicsDSG => {
-                Ok(ChunkData::ObjectDSG(
-                    Name::parse(bytes, typ)?,
-                    Version::parse(bytes, typ)?,
-                    ObjectDSG::parse(bytes, typ)?,
-                ))
-            }
+            ChunkType::EntityDSG
+            | ChunkType::InstanceableAnimatedDynamicPhysicsDSG
+            | ChunkType::DynamicPhysicsDSG
+            | ChunkType::InstanceableStaticPhysicsDSG => Ok(ChunkData::ObjectDSG(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                ObjectDSG::parse(bytes, typ)?,
+            )),
             ChunkType::AnimatedObjectDSGWrapper => Ok(ChunkData::AnimatedObjectDSGWrapper(
                 Name::parse(bytes, typ)?,
                 AnimatedObjectDSGWrapper::parse(bytes, typ)?,
@@ -445,6 +448,12 @@ impl ChunkData {
             ChunkType::CollisionOblongBox => Ok(ChunkData::CollisionOblongBox(
                 CollisionOblongBox::parse(bytes, typ)?,
             )),
+            ChunkType::CollisionCylinder => Ok(ChunkData::CollisionCylinder(
+                CollisionCylinder::parse(bytes, typ)?,
+            )),
+            ChunkType::CollisionSphere => Ok(ChunkData::CollisionSphere(CollisionSphere::parse(
+                bytes, typ,
+            )?)),
             ChunkType::CollisionVector => Ok(ChunkData::CollisionVector(CollisionVector::parse(
                 bytes, typ,
             )?)),
@@ -559,8 +568,16 @@ impl ChunkData {
                 Name::parse(bytes, typ)?,
                 WBRail::parse(bytes, typ)?,
             )),
+            ChunkType::StaticPhysicsDSG => Ok(ChunkData::StaticPhysicsDSG(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+            )),
             // -- Other produces error (eventually will produce Unknown) -- //
-            typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
+            typ => {
+                eprintln!("Error: ChunkData parsing is not implemented for {:?}", typ);
+                Ok(ChunkData::Unknown)
+                // Err(eyre!("ChunkData parsing is not implemented for {:?}", typ))
+            }
         }
     }
 
