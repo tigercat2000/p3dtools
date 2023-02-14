@@ -1,11 +1,12 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{helpers, parse_trait::Parse},
         types::ChunkType,
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Animation {
@@ -19,9 +20,9 @@ impl Parse for Animation {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(Animation {
             animation_type: helpers::pure3d_read_fourcc(bytes)?,
-            num_frames: bytes.get_f32_le(),
-            frame_rate: bytes.get_f32_le(),
-            cyclic: bytes.get_u32_le(),
+            num_frames: bytes.safe_get_f32_le()?,
+            frame_rate: bytes.safe_get_f32_le()?,
+            cyclic: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -38,10 +39,10 @@ pub struct AnimationSize {
 impl Parse for AnimationSize {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(AnimationSize {
-            PC: bytes.get_u32_le(),
-            PS2: bytes.get_u32_le(),
-            XBOX: bytes.get_u32_le(),
-            GC: bytes.get_u32_le(),
+            PC: bytes.safe_get_u32_le()?,
+            PS2: bytes.safe_get_u32_le()?,
+            XBOX: bytes.safe_get_u32_le()?,
+            GC: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -56,8 +57,8 @@ pub struct AnimationGroup {
 impl Parse for AnimationGroup {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(AnimationGroup {
-            group_id: bytes.get_u32_le(),
-            num_channels: bytes.get_u32_le(),
+            group_id: bytes.safe_get_u32_le()?,
+            num_channels: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -71,7 +72,7 @@ pub struct AnimationGroupList {
 impl Parse for AnimationGroupList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(AnimationGroupList {
-            num_groups: bytes.get_u32_le(),
+            num_groups: bytes.safe_get_u32_le()?,
         })
     }
 }

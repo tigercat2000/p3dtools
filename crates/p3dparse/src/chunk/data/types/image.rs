@@ -1,8 +1,9 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{data::parse_trait::Parse, types::ChunkType},
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, TryFromPrimitive, IntoPrimitive)]
@@ -47,12 +48,12 @@ pub struct Image {
 impl Parse for Image {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(Image {
-            width: bytes.get_u32_le(),
-            height: bytes.get_u32_le(),
-            bpp: bytes.get_u32_le(),
-            palettized: bytes.get_u32_le(),
-            has_alpha: bytes.get_u32_le(),
-            image_format: bytes.get_u32_le().try_into()?,
+            width: bytes.safe_get_u32_le()?,
+            height: bytes.safe_get_u32_le()?,
+            bpp: bytes.safe_get_u32_le()?,
+            palettized: bytes.safe_get_u32_le()?,
+            has_alpha: bytes.safe_get_u32_le()?,
+            image_format: bytes.safe_get_u32_le()?.try_into()?,
         })
     }
 }
@@ -64,11 +65,11 @@ pub struct ImageRaw {
 
 impl Parse for ImageRaw {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let size = bytes.get_u32_le();
+        let size = bytes.safe_get_u32_le()?;
 
         let mut data = Vec::with_capacity(size as usize);
         for _ in 0..size {
-            data.push(bytes.get_u8());
+            data.push(bytes.safe_get_u8()?);
         }
 
         Ok(ImageRaw { data })

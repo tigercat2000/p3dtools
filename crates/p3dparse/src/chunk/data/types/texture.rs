@@ -1,8 +1,9 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{data::parse_trait::Parse, types::ChunkType},
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Texture {
@@ -19,14 +20,14 @@ pub struct Texture {
 impl Parse for Texture {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(Texture {
-            width: bytes.get_u32_le(),
-            height: bytes.get_u32_le(),
-            bpp: bytes.get_u32_le(),
-            alpha_depth: bytes.get_u32_le(),
-            num_mip_maps: bytes.get_u32_le(),
-            texture_type: bytes.get_u32_le(),
-            usage: bytes.get_u32_le(),
-            priority: bytes.get_u32_le(),
+            width: bytes.safe_get_u32_le()?,
+            height: bytes.safe_get_u32_le()?,
+            bpp: bytes.safe_get_u32_le()?,
+            alpha_depth: bytes.safe_get_u32_le()?,
+            num_mip_maps: bytes.safe_get_u32_le()?,
+            texture_type: bytes.safe_get_u32_le()?,
+            usage: bytes.safe_get_u32_le()?,
+            priority: bytes.safe_get_u32_le()?,
         })
     }
 }

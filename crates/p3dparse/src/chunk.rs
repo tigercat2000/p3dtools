@@ -1,9 +1,12 @@
 pub mod data;
 pub mod types;
 
-use self::{data::ChunkData, types::ChunkType};
-use crate::Result;
-use bytes::{Buf, Bytes};
+use crate::{
+    bytes_ext::BufResult,
+    chunk::{data::ChunkData, types::ChunkType},
+    Result,
+};
+use bytes::Bytes;
 use eyre::eyre;
 
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -28,11 +31,11 @@ impl Chunk {
     pub fn parse(bytes: &mut Bytes, parent: Option<*const Chunk>) -> Result<Chunk> {
         // Note: C# BinaryReader is always LE unless otherwise stated
         // First 4 bytes indicate the chunk type
-        let typ: ChunkType = bytes.get_u32_le().try_into()?;
+        let typ: ChunkType = bytes.safe_get_u32_le()?.try_into()?;
         // Second 4 bytes indicate the data size including the 12 bytes for these fields
-        let data_size = bytes.get_u32_le();
+        let data_size = bytes.safe_get_u32_le()?;
         // Third 4 bytes indicate entire size including children
-        let total_size = bytes.get_u32_le();
+        let total_size = bytes.safe_get_u32_le()?;
 
         // If the data size is larger than the total size, this is corrupted.
         if data_size > total_size {
@@ -84,7 +87,7 @@ impl Chunk {
             false
         };
         // We parsed something, maybe an Unknown chunk, we need to move past it to keep framing intact.
-        bytes.advance(expected_parse_size);
+        bytes.safe_advance(expected_parse_size)?;
 
         // Indicates we have some children to parse.
         if total_size > data_size {

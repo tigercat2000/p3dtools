@@ -1,4 +1,5 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers::read_vec3,
@@ -9,7 +10,7 @@ use crate::{
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
@@ -24,11 +25,11 @@ pub struct WBLocator {
 
 impl Parse for WBLocator {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let typ = WBLocatorType::try_from(bytes.get_u32_le())?;
-        let num_data_elements = bytes.get_u32_le();
+        let typ = WBLocatorType::try_from(bytes.safe_get_u32_le()?)?;
+        let num_data_elements = bytes.safe_get_u32_le()?;
         let mut data = Vec::with_capacity(num_data_elements as usize);
         for _ in 0..num_data_elements {
-            data.push(bytes.get_u32_le());
+            data.push(bytes.safe_get_u32_le()?);
         }
 
         Ok(WBLocator {
@@ -36,7 +37,7 @@ impl Parse for WBLocator {
             num_data_elements,
             data,
             position: read_vec3(bytes)?,
-            num_triggers: bytes.get_u32_le(),
+            num_triggers: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -73,7 +74,7 @@ pub struct WBTriggerVolume {
 impl Parse for WBTriggerVolume {
     fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
         Ok(WBTriggerVolume {
-            typ: bytes.get_u32_le(),
+            typ: bytes.safe_get_u32_le()?,
             scale: read_vec3(bytes)?,
             matrix: Matrix::parse(bytes, typ)?,
         })
@@ -103,7 +104,7 @@ pub struct WBSpline {
 impl Parse for WBSpline {
     #[allow(non_snake_case)]
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let num_CVs = bytes.get_u32_le();
+        let num_CVs = bytes.safe_get_u32_le()?;
         let mut CVs = Vec::with_capacity(num_CVs as usize);
         for _ in 0..num_CVs {
             CVs.push(read_vec3(bytes)?);
@@ -132,17 +133,17 @@ impl Parse for WBRail {
     #[allow(non_snake_case)]
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(WBRail {
-            behavior: bytes.get_u32_le(),
-            min_radius: bytes.get_f32_le(),
-            max_radius: bytes.get_f32_le(),
-            track_rail: bytes.get_u32_le(),
-            track_dist: bytes.get_f32_le(),
-            reverse_sense: bytes.get_u32_le(),
-            fov: bytes.get_f32_le(),
+            behavior: bytes.safe_get_u32_le()?,
+            min_radius: bytes.safe_get_f32_le()?,
+            max_radius: bytes.safe_get_f32_le()?,
+            track_rail: bytes.safe_get_u32_le()?,
+            track_dist: bytes.safe_get_f32_le()?,
+            reverse_sense: bytes.safe_get_u32_le()?,
+            fov: bytes.safe_get_f32_le()?,
             target_offset: read_vec3(bytes)?,
             axis_play: read_vec3(bytes)?,
-            position_lag: bytes.get_f32_le(),
-            target_lag: bytes.get_f32_le(),
+            position_lag: bytes.safe_get_f32_le()?,
+            target_lag: bytes.safe_get_f32_le()?,
         })
     }
 }

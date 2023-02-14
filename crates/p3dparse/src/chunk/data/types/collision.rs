@@ -1,4 +1,5 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers::{pure3d_read_string, read_vec3},
@@ -9,7 +10,7 @@ use crate::{
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_snake_case)]
@@ -23,8 +24,8 @@ impl Parse for CollisionObject {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionObject {
             material_name: pure3d_read_string(bytes)?,
-            num_sub_object: bytes.get_u32_le(),
-            num_owner: bytes.get_u32_le(),
+            num_sub_object: bytes.safe_get_u32_le()?,
+            num_owner: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -40,9 +41,9 @@ pub struct CollisionVolume {
 impl Parse for CollisionVolume {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionVolume {
-            object_reference_index: bytes.get_u32_le(),
-            owner_index: bytes.get_i32_le(),
-            num_volume: bytes.get_u32_le(),
+            object_reference_index: bytes.safe_get_u32_le()?,
+            owner_index: bytes.safe_get_i32_le()?,
+            num_volume: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -56,7 +57,7 @@ pub struct CollisionVolumeOwner {
 impl Parse for CollisionVolumeOwner {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionVolumeOwner {
-            num_names: bytes.get_u32_le(),
+            num_names: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -71,7 +72,7 @@ pub struct CollisionBoundingBox {
 impl Parse for CollisionBoundingBox {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionBoundingBox {
-            nothing: bytes.get_u32_le(),
+            nothing: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -87,9 +88,9 @@ pub struct CollisionOblongBox {
 impl Parse for CollisionOblongBox {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionOblongBox {
-            half_extent_x: bytes.get_f32_le(),
-            half_extent_y: bytes.get_f32_le(),
-            half_extent_z: bytes.get_f32_le(),
+            half_extent_x: bytes.safe_get_f32_le()?,
+            half_extent_y: bytes.safe_get_f32_le()?,
+            half_extent_z: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -105,9 +106,9 @@ pub struct CollisionCylinder {
 impl Parse for CollisionCylinder {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionCylinder {
-            cylinder_radius: bytes.get_f32_le(),
-            length: bytes.get_f32_le(),
-            flat_end: bytes.get_u16_le(),
+            cylinder_radius: bytes.safe_get_f32_le()?,
+            length: bytes.safe_get_f32_le()?,
+            flat_end: bytes.safe_get_u16_le()?,
         })
     }
 }
@@ -121,7 +122,7 @@ pub struct CollisionSphere {
 impl Parse for CollisionSphere {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionSphere {
-            radius: bytes.get_f32_le(),
+            radius: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -156,15 +157,15 @@ pub struct CollisionObjectAttribute {
 impl Parse for CollisionObjectAttribute {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CollisionObjectAttribute {
-            static_attribute: bytes.get_u16_le(),
-            default_area: bytes.get_u32_le(),
-            can_roll: bytes.get_u16_le(),
-            can_slide: bytes.get_u16_le(),
-            can_spin: bytes.get_u16_le(),
-            can_bounce: bytes.get_u16_le(),
-            extra_attribute_1: bytes.get_u32_le(),
-            extra_attribute_2: bytes.get_u32_le(),
-            extra_attribute_3: bytes.get_u32_le(),
+            static_attribute: bytes.safe_get_u16_le()?,
+            default_area: bytes.safe_get_u32_le()?,
+            can_roll: bytes.safe_get_u16_le()?,
+            can_slide: bytes.safe_get_u16_le()?,
+            can_spin: bytes.safe_get_u16_le()?,
+            can_bounce: bytes.safe_get_u16_le()?,
+            extra_attribute_1: bytes.safe_get_u32_le()?,
+            extra_attribute_2: bytes.safe_get_u32_le()?,
+            extra_attribute_3: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -179,17 +180,17 @@ pub struct IntersectDSG {
 
 impl Parse for IntersectDSG {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let indices_len = bytes.get_u32_le();
+        let indices_len = bytes.safe_get_u32_le()?;
         let mut indices = Vec::with_capacity(indices_len as usize);
         for _ in 0..indices_len {
-            indices.push(bytes.get_u32_le())
+            indices.push(bytes.safe_get_u32_le()?)
         }
-        let positions_len = bytes.get_u32_le();
+        let positions_len = bytes.safe_get_u32_le()?;
         let mut positions = Vec::with_capacity(positions_len as usize);
         for _ in 0..positions_len {
             positions.push(read_vec3(bytes)?)
         }
-        let normals_len = bytes.get_u32_le();
+        let normals_len = bytes.safe_get_u32_le()?;
         let mut normals = Vec::with_capacity(normals_len as usize);
         for _ in 0..normals_len {
             normals.push(read_vec3(bytes)?)
@@ -210,10 +211,10 @@ pub struct TerrainTypeList {
 
 impl Parse for TerrainTypeList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let types_len = bytes.get_u32_le();
+        let types_len = bytes.safe_get_u32_le()?;
         let mut types = Vec::with_capacity(types_len as usize);
         for _ in 0..types_len {
-            types.push(bytes.get_u8())
+            types.push(bytes.safe_get_u8()?)
         }
         Ok(TerrainTypeList { types })
     }

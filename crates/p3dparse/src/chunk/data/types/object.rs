@@ -1,4 +1,5 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers::{pure3d_read_fourcc, pure3d_read_string},
@@ -8,7 +9,7 @@ use crate::{
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AnimatedObjectFactory {
@@ -20,7 +21,7 @@ impl Parse for AnimatedObjectFactory {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(AnimatedObjectFactory {
             factory_name: pure3d_read_string(bytes)?,
-            num_animations: bytes.get_u32_le(),
+            num_animations: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -35,7 +36,7 @@ impl Parse for AnimatedObject {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(AnimatedObject {
             factory_name: pure3d_read_string(bytes)?,
-            starting_animation: bytes.get_u32_le(),
+            starting_animation: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -49,8 +50,8 @@ pub struct AnimatedObjectAnimation {
 impl Parse for AnimatedObjectAnimation {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(AnimatedObjectAnimation {
-            frame_rate: bytes.get_f32_le(),
-            num_old_frame_controllers: bytes.get_u32_le(),
+            frame_rate: bytes.safe_get_f32_le()?,
+            num_old_frame_controllers: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -67,7 +68,7 @@ impl Parse for OldFrameController {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(OldFrameController {
             type2: pure3d_read_fourcc(bytes)?,
-            frame_offset: bytes.get_f32_le(),
+            frame_offset: bytes.safe_get_f32_le()?,
             hierarchy_name: pure3d_read_string(bytes)?,
             animation_name: pure3d_read_string(bytes)?,
         })
@@ -84,9 +85,9 @@ pub struct MultiController {
 impl Parse for MultiController {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(MultiController {
-            length: bytes.get_f32_le(),
-            frame_rate: bytes.get_f32_le(),
-            num_tracks: bytes.get_u32_le(),
+            length: bytes.safe_get_f32_le()?,
+            frame_rate: bytes.safe_get_f32_le()?,
+            num_tracks: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -98,7 +99,7 @@ pub struct MultiControllerTracks {
 
 impl Parse for MultiControllerTracks {
     fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
-        let capacity = bytes.get_u32_le() as usize;
+        let capacity = bytes.safe_get_u32_le()? as usize;
 
         let mut tracks = Vec::with_capacity(capacity);
         for _ in 0..capacity {
@@ -121,9 +122,9 @@ impl Parse for MultiControllerTrack {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(MultiControllerTrack {
             name: pure3d_read_string(bytes)?,
-            start_time: bytes.get_f32_le(),
-            end_time: bytes.get_f32_le(),
-            scale: bytes.get_f32_le(),
+            start_time: bytes.safe_get_f32_le()?,
+            end_time: bytes.safe_get_f32_le()?,
+            scale: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -136,7 +137,7 @@ pub struct ObjectDSG {
 impl Parse for ObjectDSG {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ObjectDSG {
-            render_order: bytes.get_u32_le(),
+            render_order: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -150,8 +151,8 @@ pub struct AnimatedObjectDSGWrapper {
 impl Parse for AnimatedObjectDSGWrapper {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(AnimatedObjectDSGWrapper {
-            version: bytes.get_u8(),
-            has_alpha: bytes.get_u8(),
+            version: bytes.safe_get_u8()?,
+            has_alpha: bytes.safe_get_u8()?,
         })
     }
 }

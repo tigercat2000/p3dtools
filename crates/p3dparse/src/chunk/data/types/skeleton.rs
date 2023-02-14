@@ -1,11 +1,12 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{parse_trait::Parse, types::shared::Matrix},
         types::ChunkType,
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Skeleton {
@@ -15,7 +16,7 @@ pub struct Skeleton {
 impl Parse for Skeleton {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(Skeleton {
-            num_joints: bytes.get_u32_le(),
+            num_joints: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -34,12 +35,12 @@ pub struct SkeletonJoint {
 impl Parse for SkeletonJoint {
     fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
         Ok(SkeletonJoint {
-            parent: bytes.get_u32_le(),
-            dof: bytes.get_i32_le(),
-            free_axis: bytes.get_i32_le(),
-            primary_axis: bytes.get_i32_le(),
-            secondary_axis: bytes.get_i32_le(),
-            twist_axis: bytes.get_i32_le(),
+            parent: bytes.safe_get_u32_le()?,
+            dof: bytes.safe_get_i32_le()?,
+            free_axis: bytes.safe_get_i32_le()?,
+            primary_axis: bytes.safe_get_i32_le()?,
+            secondary_axis: bytes.safe_get_i32_le()?,
+            twist_axis: bytes.safe_get_i32_le()?,
             rest_pose: Matrix::parse(bytes, typ)?,
         })
     }
@@ -56,10 +57,10 @@ pub struct SkeletonJointMirrorMap {
 impl Parse for SkeletonJointMirrorMap {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(SkeletonJointMirrorMap {
-            mapped_joint_index: bytes.get_u32_le(),
-            x_axis_map: bytes.get_f32_le(),
-            y_axis_map: bytes.get_f32_le(),
-            z_axis_map: bytes.get_f32_le(),
+            mapped_joint_index: bytes.safe_get_u32_le()?,
+            x_axis_map: bytes.safe_get_f32_le()?,
+            y_axis_map: bytes.safe_get_f32_le()?,
+            z_axis_map: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -72,7 +73,7 @@ pub struct SkeletonJointBonePreserve {
 impl Parse for SkeletonJointBonePreserve {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(SkeletonJointBonePreserve {
-            preserve_bone_lengths: bytes.get_u32_le(),
+            preserve_bone_lengths: bytes.safe_get_u32_le()?,
         })
     }
 }

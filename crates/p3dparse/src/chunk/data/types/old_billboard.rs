@@ -1,6 +1,5 @@
-use bytes::{Buf, Bytes};
-
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers,
@@ -11,6 +10,7 @@ use crate::{
     },
     Result,
 };
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct OldBillboardQuad {
@@ -37,9 +37,9 @@ impl Parse for OldBillboardQuad {
             uv1: helpers::read_vec2(bytes)?,
             uv2: helpers::read_vec2(bytes)?,
             uv3: helpers::read_vec2(bytes)?,
-            width: bytes.get_f32_le(),
-            height: bytes.get_f32_le(),
-            distance: bytes.get_f32_le(),
+            width: bytes.safe_get_f32_le()?,
+            height: bytes.safe_get_f32_le()?,
+            distance: bytes.safe_get_f32_le()?,
             uv_offset: helpers::read_vec2(bytes)?,
         })
     }
@@ -58,10 +58,10 @@ impl Parse for OldBillboardQuadGroup {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(OldBillboardQuadGroup {
             shader: helpers::pure3d_read_string(bytes)?,
-            ztest: bytes.get_u32_le(),
-            zwrite: bytes.get_u32_le(),
-            fog: bytes.get_u32_le(),
-            num_quads: bytes.get_u32_le(),
+            ztest: bytes.safe_get_u32_le()?,
+            zwrite: bytes.safe_get_u32_le()?,
+            fog: bytes.safe_get_u32_le()?,
+            num_quads: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -81,8 +81,8 @@ impl Parse for OldBillboardDisplayInfo {
             rotation: helpers::read_quaternion(bytes)?,
             cut_off_mode: helpers::pure3d_read_fourcc(bytes)?,
             uv_offset_range: helpers::read_vec2(bytes)?,
-            source_range: bytes.get_f32_le(),
-            edge_range: bytes.get_f32_le(),
+            source_range: bytes.safe_get_f32_le()?,
+            edge_range: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -95,7 +95,7 @@ pub struct OldBillboardPerspectiveInfo {
 impl Parse for OldBillboardPerspectiveInfo {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(OldBillboardPerspectiveInfo {
-            perspective: bytes.get_u32_le(),
+            perspective: bytes.safe_get_u32_le()?,
         })
     }
 }

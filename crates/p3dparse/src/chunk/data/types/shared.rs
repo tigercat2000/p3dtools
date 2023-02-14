@@ -1,9 +1,9 @@
-use bytes::{Buf, Bytes};
-
 use crate::{
+    bytes_ext::BufResult,
     chunk::{data::parse_trait::Parse, types::ChunkType},
     result::Result,
 };
+use bytes::Bytes;
 
 pub type Vector2 = (f32, f32);
 pub type Vector3 = (f32, f32, f32);
@@ -34,22 +34,22 @@ pub struct Matrix {
 impl Parse for Matrix {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(Matrix {
-            M11: bytes.get_f32_le(),
-            M12: bytes.get_f32_le(),
-            M13: bytes.get_f32_le(),
-            M14: bytes.get_f32_le(),
-            M21: bytes.get_f32_le(),
-            M22: bytes.get_f32_le(),
-            M23: bytes.get_f32_le(),
-            M24: bytes.get_f32_le(),
-            M31: bytes.get_f32_le(),
-            M32: bytes.get_f32_le(),
-            M33: bytes.get_f32_le(),
-            M34: bytes.get_f32_le(),
-            M41: bytes.get_f32_le(),
-            M42: bytes.get_f32_le(),
-            M43: bytes.get_f32_le(),
-            M44: bytes.get_f32_le(),
+            M11: bytes.safe_get_f32_le()?,
+            M12: bytes.safe_get_f32_le()?,
+            M13: bytes.safe_get_f32_le()?,
+            M14: bytes.safe_get_f32_le()?,
+            M21: bytes.safe_get_f32_le()?,
+            M22: bytes.safe_get_f32_le()?,
+            M23: bytes.safe_get_f32_le()?,
+            M24: bytes.safe_get_f32_le()?,
+            M31: bytes.safe_get_f32_le()?,
+            M32: bytes.safe_get_f32_le()?,
+            M33: bytes.safe_get_f32_le()?,
+            M34: bytes.safe_get_f32_le()?,
+            M41: bytes.safe_get_f32_le()?,
+            M42: bytes.safe_get_f32_le()?,
+            M43: bytes.safe_get_f32_le()?,
+            M44: bytes.safe_get_f32_le()?,
         })
     }
 }

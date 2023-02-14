@@ -1,11 +1,12 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{helpers, parse_trait::Parse},
         types::ChunkType,
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Shader {
@@ -20,10 +21,10 @@ impl Parse for Shader {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(Shader {
             pddi_shader_name: helpers::pure3d_read_string(bytes)?,
-            has_translucency: bytes.get_u32_le(),
-            vertex_needs: bytes.get_u32_le(),
-            vertex_mask: bytes.get_u32_le(),
-            num_params: bytes.get_u32_le(),
+            has_translucency: bytes.safe_get_u32_le()?,
+            vertex_needs: bytes.safe_get_u32_le()?,
+            vertex_mask: bytes.safe_get_u32_le()?,
+            num_params: bytes.safe_get_u32_le()?,
         })
     }
 }

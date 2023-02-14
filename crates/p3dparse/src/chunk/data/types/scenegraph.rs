@@ -1,11 +1,12 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{helpers::pure3d_read_string, parse_trait::Parse, types::shared::Matrix},
         types::ChunkType,
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_snake_case)]
@@ -16,7 +17,7 @@ pub struct ScenegraphBranch {
 impl Parse for ScenegraphBranch {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ScenegraphBranch {
-            num_children: bytes.get_u32_le(),
+            num_children: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -31,7 +32,7 @@ pub struct ScenegraphTransform {
 impl Parse for ScenegraphTransform {
     fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
         Ok(ScenegraphTransform {
-            num_children: bytes.get_u32_le(),
+            num_children: bytes.safe_get_u32_le()?,
             transform: Matrix::parse(bytes, typ)?,
         })
     }
@@ -47,8 +48,8 @@ pub struct ScenegraphVisibility {
 impl Parse for ScenegraphVisibility {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ScenegraphVisibility {
-            num_children: bytes.get_u32_le(),
-            is_visible: bytes.get_u32_le(),
+            num_children: bytes.safe_get_u32_le()?,
+            is_visible: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -64,7 +65,7 @@ impl Parse for ScenegraphAttachment {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ScenegraphAttachment {
             drawable_pose_name: pure3d_read_string(bytes)?,
-            num_points: bytes.get_u32_le(),
+            num_points: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -78,7 +79,7 @@ pub struct ScenegraphAttachmentPoint {
 impl Parse for ScenegraphAttachmentPoint {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ScenegraphAttachmentPoint {
-            joint: bytes.get_u32_le(),
+            joint: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -94,7 +95,7 @@ impl Parse for ScenegraphDrawable {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ScenegraphDrawable {
             drawable_name: pure3d_read_string(bytes)?,
-            is_translucent: bytes.get_u32_le(),
+            is_translucent: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -136,7 +137,7 @@ pub struct ScenegraphSortOrder {
 impl Parse for ScenegraphSortOrder {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ScenegraphSortOrder {
-            sort_order: bytes.get_f32_le(),
+            sort_order: bytes.safe_get_f32_le()?,
         })
     }
 }

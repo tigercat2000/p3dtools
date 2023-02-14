@@ -1,4 +1,5 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers::{pure3d_read_string, read_colour, read_vec2, read_vec3},
@@ -9,7 +10,7 @@ use crate::{
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -20,7 +21,7 @@ pub struct Mesh {
 impl Parse for Mesh {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(Mesh {
-            num_prim_groups: bytes.get_u32_le(),
+            num_prim_groups: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -66,11 +67,11 @@ impl Parse for OldPrimGroup {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(OldPrimGroup {
             shader_name: pure3d_read_string(bytes)?,
-            primitive_type: bytes.get_u32_le().try_into()?,
-            num_vertices: bytes.get_u32_le(),
-            num_indices: bytes.get_u32_le(),
-            num_matrices: bytes.get_u32_le(),
-            vertex_types: bytes.get_u32_le(),
+            primitive_type: bytes.safe_get_u32_le()?.try_into()?,
+            num_vertices: bytes.safe_get_u32_le()?,
+            num_indices: bytes.safe_get_u32_le()?,
+            num_matrices: bytes.safe_get_u32_le()?,
+            vertex_types: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -82,7 +83,7 @@ pub struct PositionList {
 
 impl Parse for PositionList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let capacity = bytes.get_u32_le() as usize;
+        let capacity = bytes.safe_get_u32_le()? as usize;
 
         let mut positions = Vec::with_capacity(capacity);
         for _ in 0..capacity {
@@ -102,8 +103,8 @@ pub struct UVList {
 
 impl Parse for UVList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let capacity = bytes.get_u32_le() as usize;
-        let channel = bytes.get_u32_le();
+        let capacity = bytes.safe_get_u32_le()? as usize;
+        let channel = bytes.safe_get_u32_le()?;
 
         #[allow(non_snake_case)]
         let mut UVs = Vec::with_capacity(capacity);
@@ -122,7 +123,7 @@ pub struct ColourList {
 
 impl Parse for ColourList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let capacity = bytes.get_u32_le() as usize;
+        let capacity = bytes.safe_get_u32_le()? as usize;
 
         let mut colours = Vec::with_capacity(capacity);
         for _ in 0..capacity {
@@ -140,11 +141,11 @@ pub struct IndexList {
 
 impl Parse for IndexList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        let capacity = bytes.get_u32_le() as usize;
+        let capacity = bytes.safe_get_u32_le()? as usize;
 
         let mut indices = Vec::with_capacity(capacity);
         for _ in 0..capacity {
-            indices.push(bytes.get_u32_le());
+            indices.push(bytes.safe_get_u32_le()?);
         }
 
         Ok(IndexList { indices })
@@ -159,7 +160,7 @@ pub struct RenderStatus {
 impl Parse for RenderStatus {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(RenderStatus {
-            cast_shadow: bytes.get_u32_le(),
+            cast_shadow: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -185,7 +186,7 @@ pub struct CompositeDrawableSkinList {
 impl Parse for CompositeDrawableSkinList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawableSkinList {
-            num_elements: bytes.get_u32_le(),
+            num_elements: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -198,7 +199,7 @@ pub struct CompositeDrawableSkin {
 impl Parse for CompositeDrawableSkin {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawableSkin {
-            is_translucent: bytes.get_u32_le(),
+            is_translucent: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -211,7 +212,7 @@ pub struct CompositeDrawablePropList {
 impl Parse for CompositeDrawablePropList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawablePropList {
-            num_elements: bytes.get_u32_le(),
+            num_elements: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -225,8 +226,8 @@ pub struct CompositeDrawableProp {
 impl Parse for CompositeDrawableProp {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawableProp {
-            is_translucent: bytes.get_u32_le(),
-            skeleton_joint_id: bytes.get_u32_le(),
+            is_translucent: bytes.safe_get_u32_le()?,
+            skeleton_joint_id: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -239,7 +240,7 @@ pub struct CompositeDrawableEffectList {
 impl Parse for CompositeDrawableEffectList {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawableEffectList {
-            num_elements: bytes.get_u32_le(),
+            num_elements: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -253,8 +254,8 @@ pub struct CompositeDrawableEffect {
 impl Parse for CompositeDrawableEffect {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawableEffect {
-            is_translucent: bytes.get_u32_le(),
-            skeleton_joint_id: bytes.get_u32_le(),
+            is_translucent: bytes.safe_get_u32_le()?,
+            skeleton_joint_id: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -267,7 +268,7 @@ pub struct CompositeDrawableSortOrder {
 impl Parse for CompositeDrawableSortOrder {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(CompositeDrawableSortOrder {
-            sort_order: bytes.get_f32_le(),
+            sort_order: bytes.safe_get_f32_le()?,
         })
     }
 }

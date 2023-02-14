@@ -1,11 +1,12 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{helpers::pure3d_read_string, parse_trait::Parse},
         types::ChunkType,
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_snake_case)]
@@ -18,7 +19,7 @@ impl Parse for StatePropDataV1 {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(StatePropDataV1 {
             object_factory_name: pure3d_read_string(bytes)?,
-            num_states: bytes.get_u32_le(),
+            num_states: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -38,13 +39,13 @@ pub struct StatePropStateDataV1 {
 impl Parse for StatePropStateDataV1 {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(StatePropStateDataV1 {
-            auto_transition: bytes.get_u32_le(),
-            out_state: bytes.get_u32_le(),
-            num_drawable: bytes.get_u32_le(),
-            num_frame_controllers: bytes.get_u32_le(),
-            num_events: bytes.get_u32_le(),
-            num_callbacks: bytes.get_u32_le(),
-            out_frames: bytes.get_f32_le(),
+            auto_transition: bytes.safe_get_u32_le()?,
+            out_state: bytes.safe_get_u32_le()?,
+            num_drawable: bytes.safe_get_u32_le()?,
+            num_frame_controllers: bytes.safe_get_u32_le()?,
+            num_events: bytes.safe_get_u32_le()?,
+            num_callbacks: bytes.safe_get_u32_le()?,
+            out_frames: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -58,7 +59,7 @@ pub struct StatePropVisibilitiesData {
 impl Parse for StatePropVisibilitiesData {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(StatePropVisibilitiesData {
-            visible: bytes.get_u32_le(),
+            visible: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -77,12 +78,12 @@ pub struct StatePropFrameControllerData {
 impl Parse for StatePropFrameControllerData {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(StatePropFrameControllerData {
-            cyclic: bytes.get_u32_le(),
-            num_cycles: bytes.get_u32_le(),
-            hold_frame: bytes.get_u32_le(),
-            min_frame: bytes.get_f32_le(),
-            max_frame: bytes.get_f32_le(),
-            relative_speed: bytes.get_f32_le(),
+            cyclic: bytes.safe_get_u32_le()?,
+            num_cycles: bytes.safe_get_u32_le()?,
+            hold_frame: bytes.safe_get_u32_le()?,
+            min_frame: bytes.safe_get_f32_le()?,
+            max_frame: bytes.safe_get_f32_le()?,
+            relative_speed: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -97,8 +98,8 @@ pub struct StatePropEventData {
 impl Parse for StatePropEventData {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(StatePropEventData {
-            state: bytes.get_u32_le(),
-            event_enum: bytes.get_i32_le(),
+            state: bytes.safe_get_u32_le()?,
+            event_enum: bytes.safe_get_i32_le()?,
         })
     }
 }
@@ -113,8 +114,8 @@ pub struct StatePropCallbackData {
 impl Parse for StatePropCallbackData {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(StatePropCallbackData {
-            event_enum: bytes.get_i32_le(),
-            on_frame: bytes.get_f32_le(),
+            event_enum: bytes.safe_get_i32_le()?,
+            on_frame: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -130,8 +131,8 @@ pub struct ObjectAttributes {
 impl Parse for ObjectAttributes {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ObjectAttributes {
-            class_type: bytes.get_u32_le(),
-            phy_prop_id: bytes.get_u32_le(),
+            class_type: bytes.safe_get_u32_le()?,
+            phy_prop_id: bytes.safe_get_u32_le()?,
             sound: pure3d_read_string(bytes)?,
         })
     }

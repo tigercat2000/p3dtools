@@ -1,4 +1,5 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers::{self, read_vec3},
@@ -9,7 +10,7 @@ use crate::{
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GameAttr {
@@ -19,7 +20,7 @@ pub struct GameAttr {
 impl Parse for GameAttr {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(GameAttr {
-            num_params: bytes.get_u32_le(),
+            num_params: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -35,13 +36,15 @@ impl Parse for GameAttrParam {
         Ok(GameAttrParam {
             param: helpers::pure3d_read_string(bytes)?,
             value: match typ {
-                ChunkType::GameAttrIntParam => GameAttrParamValue::Int(bytes.get_u32_le()),
-                ChunkType::GameAttrFloatParam => GameAttrParamValue::Float(bytes.get_f32_le()),
+                ChunkType::GameAttrIntParam => GameAttrParamValue::Int(bytes.safe_get_u32_le()?),
+                ChunkType::GameAttrFloatParam => {
+                    GameAttrParamValue::Float(bytes.safe_get_f32_le()?)
+                }
                 ChunkType::GameAttrColourParam => GameAttrParamValue::Colour((
-                    bytes.get_u8(),
-                    bytes.get_u8(),
-                    bytes.get_u8(),
-                    bytes.get_u8(),
+                    bytes.safe_get_u8()?,
+                    bytes.safe_get_u8()?,
+                    bytes.safe_get_u8()?,
+                    bytes.safe_get_u8()?,
                 )),
                 ChunkType::GameAttrVectorParam => GameAttrParamValue::Vector(read_vec3(bytes)?),
                 ChunkType::GameAttrMatrixParam => {

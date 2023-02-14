@@ -1,12 +1,13 @@
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use eyre::Context;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+mod bytes_ext;
 mod chunk;
 mod result;
-use result::Result;
-
 use crate::chunk::Chunk;
+use bytes_ext::BufResult;
+use result::Result;
 
 #[repr(u32)]
 #[derive(PartialEq, Eq, Debug, IntoPrimitive, TryFromPrimitive)]
@@ -21,7 +22,7 @@ pub enum FileTypes {
 pub fn parse_file(mut file: Bytes) -> Result<()> {
     let mut file_clone = file.clone();
     let file_type =
-        FileTypes::try_from(file_clone.get_u32_le()).context("Unrecognized file format")?;
+        FileTypes::try_from(file_clone.safe_get_u32_le()?).context("Unrecognized file format")?;
 
     println!("File type: {:?}", file_type);
 

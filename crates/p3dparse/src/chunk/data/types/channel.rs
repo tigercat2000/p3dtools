@@ -1,4 +1,5 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers,
@@ -9,7 +10,7 @@ use crate::{
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use eyre::eyre;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
@@ -23,18 +24,18 @@ pub struct Channel {
 impl Channel {
     fn parse_vector1dof(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         let param = helpers::pure3d_read_fourcc(bytes)?;
-        let mapping = bytes.get_u16_le();
+        let mapping = bytes.safe_get_u16_le()?;
         let constants = helpers::read_vec3(bytes)?;
-        let frame_count = bytes.get_u32_le() as usize;
+        let frame_count = bytes.safe_get_u32_le()? as usize;
 
         let mut frames = Vec::with_capacity(frame_count);
         for _ in 0..frame_count {
-            frames.push(bytes.get_u16_le());
+            frames.push(bytes.safe_get_u16_le()?);
         }
 
         let mut values = Vec::with_capacity(frame_count);
         for _ in 0..frame_count {
-            values.push(bytes.get_f32_le());
+            values.push(bytes.safe_get_f32_le()?);
         }
 
         Ok(Channel {
@@ -46,13 +47,13 @@ impl Channel {
 
     fn parse_vector2dof(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         let param = helpers::pure3d_read_fourcc(bytes)?;
-        let mapping = bytes.get_u16_le();
+        let mapping = bytes.safe_get_u16_le()?;
         let constants = helpers::read_vec3(bytes)?;
-        let frame_count = bytes.get_u32_le() as usize;
+        let frame_count = bytes.safe_get_u32_le()? as usize;
 
         let mut frames = Vec::with_capacity(frame_count);
         for _ in 0..frame_count {
-            frames.push(bytes.get_u16_le());
+            frames.push(bytes.safe_get_u16_le()?);
         }
 
         let mut values = Vec::with_capacity(frame_count);
@@ -69,12 +70,12 @@ impl Channel {
 
     fn parse_bool(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         let param = helpers::pure3d_read_fourcc(bytes)?;
-        let start_state = bytes.get_u16_le();
-        let frame_count = bytes.get_u32_le() as usize;
+        let start_state = bytes.safe_get_u16_le()?;
+        let frame_count = bytes.safe_get_u32_le()? as usize;
 
         let mut values = Vec::with_capacity(frame_count);
         for _ in 0..frame_count {
-            values.push(bytes.get_u16_le());
+            values.push(bytes.safe_get_u16_le()?);
         }
 
         Ok(Channel {
@@ -95,18 +96,18 @@ impl Parse for Channel {
         }
 
         let param = helpers::pure3d_read_fourcc(bytes)?;
-        let frame_count = bytes.get_u32_le() as usize;
+        let frame_count = bytes.safe_get_u32_le()? as usize;
 
         let mut frames = Vec::with_capacity(frame_count);
         for _ in 0..frame_count {
-            frames.push(bytes.get_u16_le());
+            frames.push(bytes.safe_get_u16_le()?);
         }
 
         match typ {
             ChunkType::Float1Channel => {
                 let mut values = Vec::with_capacity(frame_count);
                 for _ in 0..frame_count {
-                    values.push(bytes.get_f32_le());
+                    values.push(bytes.safe_get_f32_le()?);
                 }
                 let values = ChannelValues::Float1(values);
                 Ok(Channel {
@@ -130,7 +131,7 @@ impl Parse for Channel {
             ChunkType::IntChannel => {
                 let mut values = Vec::with_capacity(frame_count);
                 for _ in 0..frame_count {
-                    values.push(bytes.get_u32_le())
+                    values.push(bytes.safe_get_u32_le()?)
                 }
                 let values = ChannelValues::Int(values);
                 Ok(Channel {
@@ -206,7 +207,7 @@ pub struct ChannelInterpolation {
 impl Parse for ChannelInterpolation {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(ChannelInterpolation {
-            interpolate: bytes.get_u32_le(),
+            interpolate: bytes.safe_get_u32_le()?,
         })
     }
 }

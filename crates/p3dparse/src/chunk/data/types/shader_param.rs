@@ -1,11 +1,12 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{helpers, parse_trait::Parse},
         types::ChunkType,
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct ShaderParam {
@@ -21,13 +22,13 @@ impl Parse for ShaderParam {
                 ChunkType::ShaderTextureParam => {
                     ShaderParamValue::Texture(helpers::pure3d_read_string(bytes)?)
                 }
-                ChunkType::ShaderIntParam => ShaderParamValue::Int(bytes.get_u32_le()),
-                ChunkType::ShaderFloatParam => ShaderParamValue::Float(bytes.get_f32_le()),
+                ChunkType::ShaderIntParam => ShaderParamValue::Int(bytes.safe_get_u32_le()?),
+                ChunkType::ShaderFloatParam => ShaderParamValue::Float(bytes.safe_get_f32_le()?),
                 ChunkType::ShaderColourParam => ShaderParamValue::Colour((
-                    bytes.get_u8(),
-                    bytes.get_u8(),
-                    bytes.get_u8(),
-                    bytes.get_u8(),
+                    bytes.safe_get_u8()?,
+                    bytes.safe_get_u8()?,
+                    bytes.safe_get_u8()?,
+                    bytes.safe_get_u8()?,
                 )),
                 _ => ShaderParamValue::None,
             },

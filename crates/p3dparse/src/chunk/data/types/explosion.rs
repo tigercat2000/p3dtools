@@ -1,8 +1,9 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{data::parse_trait::Parse, types::ChunkType},
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BreakableObject {
@@ -13,8 +14,8 @@ pub struct BreakableObject {
 impl Parse for BreakableObject {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(BreakableObject {
-            typ: bytes.get_u32_le(),
-            count: bytes.get_u32_le(),
+            typ: bytes.safe_get_u32_le()?,
+            count: bytes.safe_get_u32_le()?,
         })
     }
 }

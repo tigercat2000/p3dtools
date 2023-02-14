@@ -1,4 +1,5 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{
             helpers::{pure3d_read_string, read_vec3},
@@ -9,7 +10,7 @@ use crate::{
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct BoundingBox {
@@ -36,7 +37,7 @@ impl Parse for BoundingSphere {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(BoundingSphere {
             centre: read_vec3(bytes)?,
-            radius: bytes.get_f32_le(),
+            radius: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -53,9 +54,9 @@ impl Parse for PhysicsObject {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(PhysicsObject {
             material_name: pure3d_read_string(bytes)?,
-            num_joints: bytes.get_u32_le(),
-            volume: bytes.get_f32_le(),
-            resting_sensitivity: bytes.get_f32_le(),
+            num_joints: bytes.safe_get_u32_le()?,
+            volume: bytes.safe_get_f32_le()?,
+            resting_sensitivity: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -73,12 +74,12 @@ pub struct PhysicsJoint {
 impl Parse for PhysicsJoint {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(PhysicsJoint {
-            index: bytes.get_u32_le(),
-            volume: bytes.get_f32_le(),
-            stiffness: bytes.get_f32_le(),
-            max_angle: bytes.get_f32_le(),
-            min_angle: bytes.get_f32_le(),
-            dof: bytes.get_u32_le(),
+            index: bytes.safe_get_u32_le()?,
+            volume: bytes.safe_get_f32_le()?,
+            stiffness: bytes.safe_get_f32_le()?,
+            max_angle: bytes.safe_get_f32_le()?,
+            min_angle: bytes.safe_get_f32_le()?,
+            dof: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -109,9 +110,9 @@ impl Parse for PhysicsInertiaMatrix {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(PhysicsInertiaMatrix {
             X: read_vec3(bytes)?,
-            YY: bytes.get_f32_le(),
-            YZ: bytes.get_f32_le(),
-            ZZ: bytes.get_f32_le(),
+            YY: bytes.safe_get_f32_le()?,
+            YZ: bytes.safe_get_f32_le()?,
+            ZZ: bytes.safe_get_f32_le()?,
         })
     }
 }

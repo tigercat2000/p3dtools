@@ -1,11 +1,12 @@
 use crate::{
+    bytes_ext::BufResult,
     chunk::{
         data::{helpers, parse_trait::Parse},
         types::ChunkType,
     },
     Result,
 };
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct OldParticleSystemFactory {
@@ -20,12 +21,12 @@ pub struct OldParticleSystemFactory {
 impl Parse for OldParticleSystemFactory {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(OldParticleSystemFactory {
-            framerate: bytes.get_f32_le(),
-            num_anim_frames: bytes.get_u32_le(),
-            num_ol_frames: bytes.get_u32_le(),
-            cycle_anim: bytes.get_u16_le(),
-            enable_sorting: bytes.get_u16_le(),
-            num_emitters: bytes.get_u32_le(),
+            framerate: bytes.safe_get_f32_le()?,
+            num_anim_frames: bytes.safe_get_u32_le()?,
+            num_ol_frames: bytes.safe_get_u32_le()?,
+            cycle_anim: bytes.safe_get_u16_le()?,
+            enable_sorting: bytes.safe_get_u16_le()?,
+            num_emitters: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -45,10 +46,10 @@ impl Parse for OldSpriteEmitter {
         Ok(OldSpriteEmitter {
             shader_name: helpers::pure3d_read_string(bytes)?,
             angle_mode: helpers::pure3d_read_fourcc(bytes)?,
-            angle: bytes.get_f32_le(),
+            angle: bytes.safe_get_f32_le()?,
             texture_anim_mode: helpers::pure3d_read_fourcc(bytes)?,
-            num_texture_frames: bytes.get_u32_le(),
-            texture_frame_rate: bytes.get_u32_le(),
+            num_texture_frames: bytes.safe_get_u32_le()?,
+            texture_frame_rate: bytes.safe_get_u32_le()?,
         })
     }
 }
@@ -71,13 +72,13 @@ impl Parse for OldBaseEmitter {
         Ok(OldBaseEmitter {
             particle_type: helpers::pure3d_read_fourcc(bytes)?,
             generator_type: helpers::pure3d_read_fourcc(bytes)?,
-            ztest: bytes.get_u32_le(),
-            zwrite: bytes.get_u32_le(),
-            fog: bytes.get_u32_le(),
-            max_particles: bytes.get_u32_le(),
-            infinite_life: bytes.get_u32_le(),
-            rotational_cohesion: bytes.get_f32_le(),
-            translational_cohesion: bytes.get_f32_le(),
+            ztest: bytes.safe_get_u32_le()?,
+            zwrite: bytes.safe_get_u32_le()?,
+            fog: bytes.safe_get_u32_le()?,
+            max_particles: bytes.safe_get_u32_le()?,
+            infinite_life: bytes.safe_get_u32_le()?,
+            rotational_cohesion: bytes.safe_get_f32_le()?,
+            translational_cohesion: bytes.safe_get_f32_le()?,
         })
     }
 }
@@ -103,7 +104,7 @@ pub struct OldParticleSystemInstancingInfo {
 impl Parse for OldParticleSystemInstancingInfo {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
         Ok(OldParticleSystemInstancingInfo {
-            max_instances: bytes.get_u32_le(),
+            max_instances: bytes.safe_get_u32_le()?,
         })
     }
 }
