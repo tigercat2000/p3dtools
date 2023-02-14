@@ -10,6 +10,7 @@ use crate::{
                     CollisionOblongBox, CollisionVector, CollisionVolume, CollisionVolumeOwner,
                 },
                 explosion::BreakableObject,
+                gameattr::{GameAttr, GameAttrParam},
                 image::{Image, ImageRaw},
                 mesh::{
                     ColourList, CompositeDrawable, CompositeDrawableEffect,
@@ -38,6 +39,11 @@ use crate::{
                 prop_state::{
                     ObjectAttributes, StatePropCallbackData, StatePropDataV1, StatePropEventData,
                     StatePropFrameControllerData, StatePropStateDataV1, StatePropVisibilitiesData,
+                },
+                scenegraph::{
+                    ScenegraphAttachment, ScenegraphAttachmentPoint, ScenegraphBranch,
+                    ScenegraphCamera, ScenegraphDrawable, ScenegraphLightGroup,
+                    ScenegraphSortOrder, ScenegraphTransform, ScenegraphVisibility,
                 },
                 shader::{Shader, VertexShader},
                 shader_param::ShaderParam,
@@ -105,8 +111,6 @@ pub enum ChunkData {
     UVList(UVList),
     ColourList(ColourList),
     IndexList(IndexList),
-    BoundingBox(BoundingBox),
-    BoundingSphere(BoundingSphere),
     RenderStatus(RenderStatus),
     CompositeDrawable(Name, CompositeDrawable),
     CompositeDrawableEffect(Name, CompositeDrawableEffect),
@@ -125,6 +129,8 @@ pub enum ChunkData {
     ObjectDSG(Name, Version, ObjectDSG),
     AnimatedObjectDSGWrapper(Name, AnimatedObjectDSGWrapper),
     // -- Physics -- //
+    BoundingBox(BoundingBox),
+    BoundingSphere(BoundingSphere),
     PhysicsObject(Name, Version, PhysicsObject),
     PhysicsJoint(PhysicsJoint),
     PhysicsVector(PhysicsVector),
@@ -147,6 +153,20 @@ pub enum ChunkData {
     StatePropCallbackData(Name, StatePropCallbackData),
     PropInstanceList(Name),
     ObjectAttributes(ObjectAttributes),
+    // -- Scenegraph -- //
+    Scenegraph(Name, Version),
+    ScenegraphBranch(Name, ScenegraphBranch),
+    ScenegraphTransform(Name, ScenegraphTransform),
+    ScenegraphVisibility(Name, ScenegraphVisibility),
+    ScenegraphAttachment(Name, ScenegraphAttachment),
+    ScenegraphAttachmentPoint(ScenegraphAttachmentPoint),
+    ScenegraphDrawable(Name, ScenegraphDrawable),
+    ScenegraphCamera(Name, ScenegraphCamera),
+    ScenegraphLightGroup(Name, ScenegraphLightGroup),
+    ScenegraphSortOrder(ScenegraphSortOrder),
+    // -- GameAttr -- //
+    GameAttr(Name, Version, GameAttr),
+    GameAttrParam(GameAttrParam),
     Unknown,
 }
 
@@ -451,6 +471,59 @@ impl ChunkData {
             )),
             ChunkType::PropInstanceList => {
                 Ok(ChunkData::PropInstanceList(Name::parse(bytes, typ)?))
+            }
+            // -- Scenegraph -- //
+            ChunkType::Scenegraph => Ok(ChunkData::Scenegraph(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphRoot => Ok(ChunkData::None),
+            ChunkType::OldScenegraphBranch => Ok(ChunkData::ScenegraphBranch(
+                Name::parse(bytes, typ)?,
+                ScenegraphBranch::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphTransform => Ok(ChunkData::ScenegraphTransform(
+                Name::parse(bytes, typ)?,
+                ScenegraphTransform::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphVisibility => Ok(ChunkData::ScenegraphVisibility(
+                Name::parse(bytes, typ)?,
+                ScenegraphVisibility::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphAttachment => Ok(ChunkData::ScenegraphAttachment(
+                Name::parse(bytes, typ)?,
+                ScenegraphAttachment::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphAttachmentPoint => Ok(ChunkData::ScenegraphAttachmentPoint(
+                ScenegraphAttachmentPoint::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphDrawable => Ok(ChunkData::ScenegraphDrawable(
+                Name::parse(bytes, typ)?,
+                ScenegraphDrawable::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphCamera => Ok(ChunkData::ScenegraphCamera(
+                Name::parse(bytes, typ)?,
+                ScenegraphCamera::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphLightGroup => Ok(ChunkData::ScenegraphLightGroup(
+                Name::parse(bytes, typ)?,
+                ScenegraphLightGroup::parse(bytes, typ)?,
+            )),
+            ChunkType::OldScenegraphSortOrder => Ok(ChunkData::ScenegraphSortOrder(
+                ScenegraphSortOrder::parse(bytes, typ)?,
+            )),
+            // -- GameAttr -- //
+            ChunkType::GameAttr => Ok(ChunkData::GameAttr(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                GameAttr::parse(bytes, typ)?,
+            )),
+            ChunkType::GameAttrIntParam
+            | ChunkType::GameAttrFloatParam
+            | ChunkType::GameAttrColourParam
+            | ChunkType::GameAttrVectorParam
+            | ChunkType::GameAttrMatrixParam => {
+                Ok(ChunkData::GameAttrParam(GameAttrParam::parse(bytes, typ)?))
             }
             // -- Other produces error (eventually will produce Unknown) -- //
             typ => Err(eyre!("ChunkData parsing is not implemented for {:?}", typ)),
