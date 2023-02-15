@@ -1,6 +1,8 @@
 pub mod data;
 pub mod types;
 
+use std::ptr::NonNull;
+
 use crate::{
     bytes_ext::BufResult,
     chunk::{data::ChunkData, types::ChunkType},
@@ -14,21 +16,22 @@ pub struct Chunk {
     pub typ: ChunkType,
     pub children: Vec<Chunk>,
     pub data: ChunkData,
-    pub parent: Option<*const Chunk>,
+    pub parent: Option<NonNull<Chunk>>,
 }
 
 fn get_lineage(chunk: &Chunk) -> String {
     let mut string = chunk.get_name();
-    let mut target: *const Chunk = chunk;
-    while let Some(parent) = unsafe { (*target).parent } {
-        string.push_str(&format!("->{}", unsafe { (*parent).get_name() }));
+    let mut target: &Chunk = chunk;
+    while let Some(parent) = target.parent {
+        let parent = unsafe { parent.as_ref() };
+        string.push_str(&format!("->{}", parent.get_name()));
         target = parent;
     }
     string
 }
 
 impl Chunk {
-    pub fn parse(bytes: &mut Bytes, parent: Option<*const Chunk>) -> Result<Chunk> {
+    pub fn parse(bytes: &mut Bytes, parent: Option<NonNull<Chunk>>) -> Result<Chunk> {
         // Note: C# BinaryReader is always LE unless otherwise stated
         // First 4 bytes indicate the chunk type
         let typ: ChunkType = bytes.safe_get_u32_le()?.try_into()?;
@@ -61,7 +64,7 @@ impl Chunk {
                 let lineage = format!(
                     "Error: Could not parse data. Lineage Info: {}",
                     if let Some(parent) = parent {
-                        unsafe { get_lineage(&*parent) }
+                        unsafe { get_lineage(parent.as_ref()) }
                     } else {
                         "Unknown".to_owned()
                     }
@@ -103,7 +106,7 @@ impl Chunk {
             let mut parsed_so_far = 0;
             while parsed_so_far < potential_children_size {
                 let before_parse = potential_children_slice.len();
-                match Chunk::parse(&mut potential_children_slice, Some(&chunk)) {
+                match Chunk::parse(&mut potential_children_slice, Some((&chunk).into())) {
                     Ok(child) => {
                         eprintln!(
                             "Recovery: We sucessfully parsed a misaligned child {}",
@@ -141,7 +144,9 @@ impl Chunk {
                 let mut parsed_so_far = 0;
                 while parsed_so_far < total_children_size {
                     let before_parse = bytes.len();
-                    chunk.children.push(Chunk::parse(bytes, Some(&chunk))?);
+                    chunk
+                        .children
+                        .push(Chunk::parse(bytes, Some((&chunk).into()))?);
                     let after_parse = bytes.len();
                     parsed_so_far += before_parse - after_parse;
                 }
