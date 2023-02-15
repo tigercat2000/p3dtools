@@ -128,6 +128,81 @@ impl Parse for UVList {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct NormalList {
+    pub normals: Vec<Vector3>,
+}
+
+impl Parse for NormalList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.safe_get_u32_le()? as usize;
+
+        let mut normals = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            normals.push(read_vec3(bytes)?);
+        }
+
+        Ok(NormalList { normals })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct TangentList {
+    pub tangents: Vec<Vector3>,
+}
+
+impl Parse for TangentList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.safe_get_u32_le()? as usize;
+
+        let mut tangents = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            tangents.push(read_vec3(bytes)?);
+        }
+
+        Ok(TangentList { tangents })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct BinormalList {
+    pub binormals: Vec<Vector3>,
+}
+
+impl Parse for BinormalList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.safe_get_u32_le()? as usize;
+
+        let mut binormals = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            binormals.push(read_vec3(bytes)?);
+        }
+
+        Ok(BinormalList { binormals })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct PackedNormalList {
+    pub normals: Vec<u8>,
+}
+
+impl Parse for PackedNormalList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.safe_get_u32_le()? as usize;
+
+        let mut normals = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            normals.push(bytes.safe_get_u8()?);
+        }
+
+        Ok(PackedNormalList { normals })
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ColourList {
     pub colours: Vec<Colour>,

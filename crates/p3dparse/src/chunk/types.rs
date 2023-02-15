@@ -432,7 +432,7 @@ pub enum ChunkType {
     PrimGroupMemoryImageIndex = 0x00010013,
     PrimGroupMemoryImageVertexDescription = 0x00010014,
     TangentList = 0x00010015,
-    BiNormalList = 0x00010016,
+    BinormalList = 0x00010016,
     RenderStatus = 0x00010017,
     OldExpressionOffsets = 0x00010018,
     ShadowSkin = 0x00010019,

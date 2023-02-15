@@ -15,10 +15,11 @@ use crate::{
                 image::{Image, ImageRaw},
                 locator::{WBLocator, WBMatrix, WBRail, WBSpline, WBTriggerVolume},
                 mesh::{
-                    ColourList, CompositeDrawable, CompositeDrawableEffect,
+                    BinormalList, ColourList, CompositeDrawable, CompositeDrawableEffect,
                     CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
                     CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
-                    IndexList, Mesh, OldPrimGroup, PositionList, RenderStatus, UVList,
+                    IndexList, Mesh, NormalList, OldPrimGroup, PackedNormalList, PositionList,
+                    RenderStatus, TangentList, UVList,
                 },
                 name::Name,
                 object::{
@@ -110,6 +111,10 @@ pub enum ChunkData {
     Mesh(Name, Version, Mesh),
     OldPrimGroup(Version, OldPrimGroup),
     PositionList(PositionList),
+    NormalList(NormalList),
+    TangentList(TangentList),
+    BinormalList(BinormalList),
+    PackedNormalList(PackedNormalList),
     UVList(UVList),
     ColourList(ColourList),
     IndexList(IndexList),
@@ -335,6 +340,14 @@ impl ChunkData {
             ChunkType::PositionList => {
                 Ok(ChunkData::PositionList(PositionList::parse(bytes, typ)?))
             }
+            ChunkType::NormalList => Ok(ChunkData::NormalList(NormalList::parse(bytes, typ)?)),
+            ChunkType::TangentList => Ok(ChunkData::TangentList(TangentList::parse(bytes, typ)?)),
+            ChunkType::BinormalList => {
+                Ok(ChunkData::BinormalList(BinormalList::parse(bytes, typ)?))
+            }
+            ChunkType::PackedNormalList => Ok(ChunkData::PackedNormalList(
+                PackedNormalList::parse(bytes, typ)?,
+            )),
             ChunkType::UVList => Ok(ChunkData::UVList(UVList::parse(bytes, typ)?)),
             ChunkType::ColourList => Ok(ChunkData::ColourList(ColourList::parse(bytes, typ)?)),
             ChunkType::IndexList => Ok(ChunkData::IndexList(IndexList::parse(bytes, typ)?)),
