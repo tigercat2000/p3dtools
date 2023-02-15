@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use bytes::Bytes;
 use eyre::Context;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -29,10 +27,6 @@ pub fn parse_file(mut file: Bytes) -> Result<()> {
     println!("File type: {:?}", file_type);
 
     let root_chunk = Chunk::parse(&mut file, None)?;
-    eprintln!(
-        "The amount of strong counts for root chunk is {}",
-        Rc::strong_count(&root_chunk)
-    );
 
     // println!("Root Chunk: {:?}", root_chunk);
 
