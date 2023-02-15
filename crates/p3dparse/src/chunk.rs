@@ -1,6 +1,11 @@
 pub mod data;
 pub mod types;
 
+use std::{
+    cell::{Ref, RefCell},
+    rc::Rc,
+};
+
 use crate::{
     bytes_ext::BufResult,
     chunk::{data::ChunkData, types::ChunkType},
@@ -9,26 +14,30 @@ use crate::{
 use bytes::Bytes;
 use eyre::eyre;
 
+pub type Link<T> = Rc<RefCell<T>>;
+
 #[derive(Debug, PartialEq, PartialOrd)]
 pub struct Chunk {
     pub typ: ChunkType,
-    pub children: Vec<Chunk>,
+    pub children: Vec<Link<Chunk>>,
     pub data: ChunkData,
-    pub parent: Option<*const Chunk>,
+    pub parent: Option<Link<Chunk>>,
 }
 
-fn get_lineage(chunk: &Chunk) -> String {
+fn get_lineage(chunk: &Ref<Chunk>) -> String {
     let mut string = chunk.get_name();
-    let mut target: *const Chunk = chunk;
-    while let Some(parent) = unsafe { (*target).parent } {
-        string.push_str(&format!("->{}", unsafe { (*parent).get_name() }));
-        target = parent;
+    if let Some(parent) = &chunk.parent {
+        string.push_str("->");
+        string.push_str(&get_lineage(&parent.borrow()));
     }
     string
 }
 
 impl Chunk {
-    pub fn parse(bytes: &mut Bytes, parent: Option<*const Chunk>) -> Result<Chunk> {
+    pub fn parse(
+        bytes: &mut Bytes,
+        parent: Option<Rc<RefCell<Chunk>>>,
+    ) -> Result<Rc<RefCell<Chunk>>> {
         // Note: C# BinaryReader is always LE unless otherwise stated
         // First 4 bytes indicate the chunk type
         let typ: ChunkType = bytes.safe_get_u32_le()?.try_into()?;
@@ -61,7 +70,7 @@ impl Chunk {
                 let lineage = format!(
                     "Error: Could not parse data. Lineage Info: {}",
                     if let Some(parent) = parent {
-                        unsafe { get_lineage(&*parent) }
+                        get_lineage(&parent.borrow())
                     } else {
                         "Unknown".to_owned()
                     }
@@ -70,18 +79,20 @@ impl Chunk {
             }
         };
 
-        let mut chunk = Chunk {
+        let chunk = Rc::new(RefCell::new(Chunk {
             typ,
             children: Vec::new(),
             data,
             parent,
-        };
+        }));
 
         // It's okay if we fail to parse a chunk because we always know the size and can keep our framing intact.
         if !data_slice.is_empty() {
             eprintln!(
-                "Warning: Chunk {} was expected to parse {:?} bytes but only parsed {:?}, data result: {:?}",
-                get_lineage(&chunk), expected_parse_size, expected_parse_size - data_slice.len(), chunk.data
+                "Warning: Chunk {} was expected to parse {:?} bytes but only parsed {:?}",
+                get_lineage(&chunk.borrow()),
+                expected_parse_size,
+                expected_parse_size - data_slice.len()
             );
             let actually_consumed = (expected_parse_size - data_slice.len()) as usize;
             // Our original bytes slice has already consumed the 12 byte header, so we have to subtract it here
@@ -103,19 +114,19 @@ impl Chunk {
             let mut parsed_so_far = 0;
             while parsed_so_far < potential_children_size {
                 let before_parse = potential_children_slice.len();
-                match Chunk::parse(&mut potential_children_slice, Some(&chunk)) {
+                match Chunk::parse(&mut potential_children_slice, Some(chunk.clone())) {
                     Ok(child) => {
                         eprintln!(
                             "Recovery: We sucessfully parsed a misaligned child {}",
-                            get_lineage(&child)
+                            get_lineage(&child.borrow())
                         );
-                        chunk.children.push(child);
+                        chunk.borrow_mut().children.push(child);
                     }
                     Err(e) => {
-                        eprintln!(
-                            "Recovery: We failed to parse a misaligned child for {}",
-                            get_lineage(&chunk)
-                        );
+                        // eprintln!(
+                        //     "Recovery: We failed to parse a misaligned child for {}",
+                        //     get_lineage(&chunk)
+                        // );
                         eprintln!("Recovery: This was caused by: {:?}", e);
                         eprintln!("-- Full Data Hexdump --");
                         hexdump::hexdump(&original_data_slice);
@@ -134,14 +145,15 @@ impl Chunk {
         bytes.safe_advance(expected_parse_size)?;
 
         // Only parse children if we didn't do so already in fallback
-        if chunk.children.is_empty() {
+        if RefCell::borrow(&chunk).children.is_empty() {
             // Indicates we have some children to parse.
             if total_size > data_size {
                 let total_children_size = (total_size - data_size) as usize;
                 let mut parsed_so_far = 0;
                 while parsed_so_far < total_children_size {
                     let before_parse = bytes.len();
-                    chunk.children.push(Chunk::parse(bytes, Some(&chunk))?);
+                    let child = Chunk::parse(bytes, Some(chunk.clone()))?;
+                    chunk.borrow_mut().children.push(child);
                     let after_parse = bytes.len();
                     parsed_so_far += before_parse - after_parse;
                 }
