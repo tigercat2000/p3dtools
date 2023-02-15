@@ -4,13 +4,14 @@ use crate::{
     result::Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
 pub type Vector2 = (f32, f32);
 pub type Vector3 = (f32, f32, f32);
 pub type Colour = (u8, u8, u8, u8);
 pub type Quaternion = (f32, f32, f32, f32);
 
-#[derive(Debug, PartialEq, PartialOrd, Clone)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Matrix {
     pub M11: f32,

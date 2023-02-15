@@ -4,8 +4,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BreakableObject {
     pub typ: u32,
     pub count: u32,

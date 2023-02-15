@@ -19,18 +19,14 @@ pub enum FileTypes {
     Pure3D = 0xFF44_3350,
 }
 
-pub fn parse_file(mut file: Bytes) -> Result<()> {
+pub fn parse_file(mut file: Bytes) -> Result<Chunk> {
     let mut file_clone = file.clone();
     let file_type =
         FileTypes::try_from(file_clone.safe_get_u32_le()?).context("Unrecognized file format")?;
 
     println!("File type: {:?}", file_type);
 
-    let root_chunk = Chunk::parse(&mut file, None)?;
-
-    // println!("Root Chunk: {:?}", root_chunk);
-
-    Ok(())
+    Chunk::parse(&mut file, None)
 }
 
 #[cfg(test)]

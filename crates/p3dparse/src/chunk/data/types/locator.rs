@@ -12,8 +12,9 @@ use crate::{
 };
 use bytes::Bytes;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct WBLocator {
     pub typ: WBLocatorType,
@@ -42,7 +43,18 @@ impl Parse for WBLocator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, TryFromPrimitive, IntoPrimitive)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    TryFromPrimitive,
+    IntoPrimitive,
+    Serialize,
+    Deserialize,
+)]
 #[allow(non_snake_case)]
 #[repr(u32)]
 pub enum WBLocatorType {
@@ -64,7 +76,7 @@ pub enum WBLocatorType {
     SpawnPoint = 15,
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct WBTriggerVolume {
     pub typ: u32,
     pub scale: Vector3,
@@ -81,7 +93,7 @@ impl Parse for WBTriggerVolume {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct WBMatrix {
     pub matrix: Matrix,
 }
@@ -94,7 +106,7 @@ impl Parse for WBMatrix {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct WBSpline {
     pub num_CVs: u32,
@@ -113,7 +125,7 @@ impl Parse for WBSpline {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct WBRail {
     pub behavior: u32,

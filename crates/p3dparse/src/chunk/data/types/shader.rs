@@ -7,8 +7,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Shader {
     pub pddi_shader_name: String,
     pub has_translucency: u32,
@@ -29,7 +30,7 @@ impl Parse for Shader {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct VertexShader {
     pub vertex_shader_name: String,
 }

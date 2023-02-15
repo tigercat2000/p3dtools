@@ -11,8 +11,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GameAttr {
     pub num_params: u32,
 }
@@ -25,7 +26,7 @@ impl Parse for GameAttr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct GameAttrParam {
     pub param: String,
     pub value: GameAttrParamValue,
@@ -56,7 +57,7 @@ impl Parse for GameAttrParam {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum GameAttrParamValue {
     Int(u32),
     Float(f32),

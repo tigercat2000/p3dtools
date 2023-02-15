@@ -7,8 +7,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphBranch {
     pub num_children: u32,
@@ -22,7 +23,7 @@ impl Parse for ScenegraphBranch {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphTransform {
     pub num_children: u32,
@@ -38,7 +39,7 @@ impl Parse for ScenegraphTransform {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphVisibility {
     pub num_children: u32,
@@ -54,7 +55,7 @@ impl Parse for ScenegraphVisibility {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphAttachment {
     pub drawable_pose_name: String,
@@ -70,7 +71,7 @@ impl Parse for ScenegraphAttachment {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphAttachmentPoint {
     pub joint: u32,
@@ -84,7 +85,7 @@ impl Parse for ScenegraphAttachmentPoint {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphDrawable {
     pub drawable_name: String,
@@ -100,7 +101,7 @@ impl Parse for ScenegraphDrawable {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphCamera {
     pub camera_name: String,
@@ -114,7 +115,7 @@ impl Parse for ScenegraphCamera {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphLightGroup {
     pub light_group_name: String,
@@ -128,7 +129,7 @@ impl Parse for ScenegraphLightGroup {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphSortOrder {
     pub sort_order: f32,

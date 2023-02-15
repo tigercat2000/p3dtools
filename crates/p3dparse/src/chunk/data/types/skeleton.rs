@@ -7,8 +7,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Skeleton {
     pub num_joints: u32,
 }
@@ -21,7 +22,7 @@ impl Parse for Skeleton {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SkeletonJoint {
     pub parent: u32,
     pub dof: i32,
@@ -46,7 +47,7 @@ impl Parse for SkeletonJoint {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct SkeletonJointMirrorMap {
     pub mapped_joint_index: u32,
     pub x_axis_map: f32,
@@ -65,7 +66,7 @@ impl Parse for SkeletonJointMirrorMap {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SkeletonJointBonePreserve {
     pub preserve_bone_lengths: u32,
 }

@@ -7,8 +7,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StatePropDataV1 {
     pub object_factory_name: String,
@@ -24,7 +25,7 @@ impl Parse for StatePropDataV1 {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StatePropStateDataV1 {
     pub auto_transition: u32,
@@ -50,7 +51,7 @@ impl Parse for StatePropStateDataV1 {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StatePropVisibilitiesData {
     pub visible: u32,
@@ -64,7 +65,7 @@ impl Parse for StatePropVisibilitiesData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StatePropFrameControllerData {
     pub cyclic: u32,
@@ -88,7 +89,7 @@ impl Parse for StatePropFrameControllerData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StatePropEventData {
     pub state: u32,
@@ -104,7 +105,7 @@ impl Parse for StatePropEventData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StatePropCallbackData {
     pub event_enum: i32,
@@ -120,7 +121,7 @@ impl Parse for StatePropCallbackData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ObjectAttributes {
     pub class_type: u32,

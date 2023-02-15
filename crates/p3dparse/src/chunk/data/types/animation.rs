@@ -7,8 +7,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Animation {
     pub animation_type: String,
     pub num_frames: f32,
@@ -27,7 +28,7 @@ impl Parse for Animation {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms, non_snake_case)]
 pub struct AnimationSize {
     pub PC: u32,
@@ -47,7 +48,7 @@ impl Parse for AnimationSize {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct AnimationGroup {
     pub group_id: u32,
@@ -63,7 +64,7 @@ impl Parse for AnimationGroup {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct AnimationGroupList {
     pub num_groups: u32,

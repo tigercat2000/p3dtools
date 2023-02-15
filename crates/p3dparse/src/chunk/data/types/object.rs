@@ -10,8 +10,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct AnimatedObjectFactory {
     pub factory_name: String,
     pub num_animations: u32,
@@ -26,7 +27,7 @@ impl Parse for AnimatedObjectFactory {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct AnimatedObject {
     pub factory_name: String,
     pub starting_animation: u32,
@@ -41,7 +42,7 @@ impl Parse for AnimatedObject {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct AnimatedObjectAnimation {
     pub frame_rate: f32,
     pub num_old_frame_controllers: u32,
@@ -56,7 +57,7 @@ impl Parse for AnimatedObjectAnimation {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct OldFrameController {
     pub type2: String,
     pub frame_offset: f32,
@@ -75,7 +76,7 @@ impl Parse for OldFrameController {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct MultiController {
     pub length: f32,
     pub frame_rate: f32,
@@ -92,7 +93,7 @@ impl Parse for MultiController {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct MultiControllerTracks {
     pub tracks: Vec<MultiControllerTrack>,
 }
@@ -110,7 +111,7 @@ impl Parse for MultiControllerTracks {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct MultiControllerTrack {
     pub name: String,
     pub start_time: f32,
@@ -129,7 +130,7 @@ impl Parse for MultiControllerTrack {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ObjectDSG {
     pub render_order: u32,
 }
@@ -142,7 +143,7 @@ impl Parse for ObjectDSG {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct AnimatedObjectDSGWrapper {
     pub version: u8,
     pub has_alpha: u8,

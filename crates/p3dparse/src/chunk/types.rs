@@ -1,9 +1,22 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 
 /// Directly stolen from LucasStuff.Radical
 /// And the Simpsons Hit & Run Source code leak!
 #[repr(u32)]
-#[derive(IntoPrimitive, TryFromPrimitive, Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(
+    IntoPrimitive,
+    TryFromPrimitive,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Clone,
+    Copy,
+    Deserialize,
+    Serialize,
+)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum ChunkType {
     // Old Pure3D

@@ -7,8 +7,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct OldParticleSystemFactory {
     pub framerate: f32,
     pub num_anim_frames: u32,
@@ -31,7 +32,7 @@ impl Parse for OldParticleSystemFactory {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct OldSpriteEmitter {
     pub shader_name: String,
     pub angle_mode: String,
@@ -54,7 +55,7 @@ impl Parse for OldSpriteEmitter {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct OldBaseEmitter {
     pub particle_type: String,
     pub generator_type: String,
@@ -83,7 +84,7 @@ impl Parse for OldBaseEmitter {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct OldParticleSystem {
     pub unknown: String,
 }
@@ -96,7 +97,7 @@ impl Parse for OldParticleSystem {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct OldParticleSystemInstancingInfo {
     pub max_instances: u32,
 }

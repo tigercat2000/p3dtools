@@ -10,27 +10,29 @@ use crate::{
 };
 use bytes::Bytes;
 use eyre::eyre;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub struct Chunk {
     pub typ: ChunkType,
     pub children: Vec<Chunk>,
     pub data: ChunkData,
+    #[serde(skip_serializing, skip_deserializing)]
     pub parent: Option<NonNull<Chunk>>,
 }
 
-fn get_lineage(chunk: &Chunk) -> String {
-    let mut string = chunk.get_name();
-    let mut target: &Chunk = chunk;
-    while let Some(parent) = target.parent {
-        let parent = unsafe { parent.as_ref() };
-        string.push_str(&format!("->{}", parent.get_name()));
-        target = parent;
-    }
-    string
-}
-
 impl Chunk {
+    pub fn get_lineage(&self) -> String {
+        let mut string = self.get_name();
+        let mut target: &Chunk = self;
+        while let Some(parent) = target.parent {
+            let parent = unsafe { parent.as_ref() };
+            string.push_str(&format!("->{}", parent.get_name()));
+            target = parent;
+        }
+        string
+    }
+
     pub fn parse(bytes: &mut Bytes, parent: Option<NonNull<Chunk>>) -> Result<Chunk> {
         // Note: C# BinaryReader is always LE unless otherwise stated
         // First 4 bytes indicate the chunk type
@@ -64,7 +66,7 @@ impl Chunk {
                 let lineage = format!(
                     "Error: Could not parse data. Lineage Info: {}",
                     if let Some(parent) = parent {
-                        unsafe { get_lineage(parent.as_ref()) }
+                        unsafe { parent.as_ref().get_lineage() }
                     } else {
                         "Unknown".to_owned()
                     }
@@ -84,7 +86,7 @@ impl Chunk {
         if !data_slice.is_empty() {
             eprintln!(
                 "Warning: Chunk {} was expected to parse {:?} bytes but only parsed {:?}, data result: {:?}",
-                get_lineage(&chunk), expected_parse_size, expected_parse_size - data_slice.len(), chunk.data
+                &chunk.get_lineage(), expected_parse_size, expected_parse_size - data_slice.len(), chunk.data
             );
             let actually_consumed = (expected_parse_size - data_slice.len()) as usize;
             // Our original bytes slice has already consumed the 12 byte header, so we have to subtract it here
@@ -110,14 +112,14 @@ impl Chunk {
                     Ok(child) => {
                         eprintln!(
                             "Recovery: We sucessfully parsed a misaligned child {}",
-                            get_lineage(&child)
+                            &child.get_lineage()
                         );
                         chunk.children.push(child);
                     }
                     Err(e) => {
                         eprintln!(
                             "Recovery: We failed to parse a misaligned child for {}",
-                            get_lineage(&chunk)
+                            &chunk.get_lineage()
                         );
                         eprintln!("Recovery: This was caused by: {:?}", e);
                         eprintln!("-- Full Data Hexdump --");

@@ -61,12 +61,13 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
 mod helpers;
 mod parse_trait;
 mod types;
 
-#[derive(Clone, PartialEq, PartialOrd, Debug)]
+#[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub enum ChunkData {
     None,

@@ -11,8 +11,9 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionObject {
     pub material_name: String,
@@ -30,7 +31,7 @@ impl Parse for CollisionObject {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionVolume {
     pub object_reference_index: u32,
@@ -48,7 +49,7 @@ impl Parse for CollisionVolume {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionVolumeOwner {
     pub num_names: u32,
@@ -62,7 +63,7 @@ impl Parse for CollisionVolumeOwner {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionBoundingBox {
     /// Literally the same in SRR2 source code, "dummy" or "Nothing"
@@ -77,7 +78,7 @@ impl Parse for CollisionBoundingBox {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionOblongBox {
     pub half_extent_x: f32,
@@ -95,7 +96,7 @@ impl Parse for CollisionOblongBox {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionCylinder {
     pub cylinder_radius: f32,
@@ -113,7 +114,7 @@ impl Parse for CollisionCylinder {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionSphere {
     pub radius: f32,
@@ -126,7 +127,7 @@ impl Parse for CollisionSphere {
         })
     }
 }
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionVector {
     pub vector: Vector3,
@@ -140,7 +141,7 @@ impl Parse for CollisionVector {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionObjectAttribute {
     pub static_attribute: u16,
@@ -170,7 +171,7 @@ impl Parse for CollisionObjectAttribute {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct IntersectDSG {
     pub indices: Vec<u32>,
@@ -203,7 +204,7 @@ impl Parse for IntersectDSG {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct TerrainTypeList {
     pub types: Vec<u8>,

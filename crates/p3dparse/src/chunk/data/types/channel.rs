@@ -12,8 +12,9 @@ use crate::{
 };
 use bytes::Bytes;
 use eyre::eyre;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct Channel {
     pub param: String,
@@ -184,7 +185,7 @@ impl Parse for Channel {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum ChannelValues {
     Float1(Vec<f32>),
@@ -198,7 +199,7 @@ pub enum ChannelValues {
     Bool(u16, Vec<u16>),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct ChannelInterpolation {
     pub interpolate: u32,
