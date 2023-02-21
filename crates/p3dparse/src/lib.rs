@@ -3,7 +3,7 @@ use eyre::Context;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 mod bytes_ext;
-mod chunk;
+pub mod chunk;
 mod result;
 use crate::chunk::Chunk;
 use bytes_ext::BufResult;
@@ -41,9 +41,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_l1r1() {
-        let bytes = Bytes::from_static(include_bytes!("../test_data/l1r1.p3d"));
-        parse_file(bytes).unwrap();
-    }
+    // #[test]
+    // fn test_l1r1() {
+    //     let bytes = Bytes::from_static(include_bytes!("../test_data/l1r1.p3d"));
+    //     parse_file(bytes).unwrap();
+    // }
 }

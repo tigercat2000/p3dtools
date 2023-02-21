@@ -158,7 +158,11 @@ impl Chunk {
         Ok(chunk)
     }
 
-    fn get_name(&self) -> String {
+    pub fn get_name(&self) -> String {
         format!("{}({:?})", self.data.get_name(), self.typ)
+    }
+
+    pub fn get_children_of_type(&self, typ: ChunkType) -> impl Iterator<Item = &Chunk> {
+        self.children.iter().filter(move |c| c.typ == typ)
     }
 }

@@ -66,7 +66,7 @@ use serde::{Deserialize, Serialize};
 
 mod helpers;
 mod parse_trait;
-mod types;
+pub mod types;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
