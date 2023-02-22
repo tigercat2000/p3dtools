@@ -57,7 +57,7 @@ use crate::{
                 version::Version,
             },
         },
-        types::ChunkType,
+        type_identifiers::ChunkType,
     },
     Result,
 };

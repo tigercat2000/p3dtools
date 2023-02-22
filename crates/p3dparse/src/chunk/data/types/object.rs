@@ -5,7 +5,7 @@ use crate::{
             helpers::{pure3d_read_fourcc, pure3d_read_string},
             parse_trait::Parse,
         },
-        types::ChunkType,
+        type_identifiers::ChunkType,
     },
     Result,
 };

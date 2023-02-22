@@ -1,11 +1,11 @@
 pub mod data;
-pub mod types;
+pub mod type_identifiers;
 
 use std::ptr::NonNull;
 
 use crate::{
     bytes_ext::BufResult,
-    chunk::{data::ChunkData, types::ChunkType},
+    chunk::{data::ChunkData, type_identifiers::ChunkType},
     Result,
 };
 use bytes::Bytes;

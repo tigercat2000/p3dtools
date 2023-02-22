@@ -6,7 +6,7 @@ use crate::{
             parse_trait::Parse,
             types::shared::{Colour, Vector2, Vector3},
         },
-        types::ChunkType,
+        type_identifiers::ChunkType,
     },
     Result,
 };

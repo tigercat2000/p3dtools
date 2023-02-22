@@ -1,4 +1,4 @@
-use crate::{chunk::types::ChunkType, Result};
+use crate::{chunk::type_identifiers::ChunkType, Result};
 use bytes::Bytes;
 
 pub trait Parse {

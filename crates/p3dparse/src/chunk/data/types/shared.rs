@@ -1,6 +1,6 @@
 use crate::{
     bytes_ext::BufResult,
-    chunk::{data::parse_trait::Parse, types::ChunkType},
+    chunk::{data::parse_trait::Parse, type_identifiers::ChunkType},
     result::Result,
 };
 use bytes::Bytes;
