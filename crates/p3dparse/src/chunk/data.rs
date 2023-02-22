@@ -597,9 +597,9 @@ impl ChunkData {
 
     pub fn get_name(&self) -> String {
         match self {
-            ChunkData::OldBaseEmitter(_, name, _) => name.name.clone(),
-            ChunkData::OldSpriteEmitter(_, name, _) => name.name.clone(),
-            ChunkData::OldParticleSystemFactory(_, name, _) => name.name.clone(),
+            ChunkData::OldBaseEmitter(_, name, _) => name.0.clone(),
+            ChunkData::OldSpriteEmitter(_, name, _) => name.0.clone(),
+            ChunkData::OldParticleSystemFactory(_, name, _) => name.0.clone(),
             _ => "".into(),
         }
     }

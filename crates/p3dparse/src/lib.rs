@@ -1,13 +1,16 @@
 use bytes::Bytes;
+use bytes_ext::BufResult;
 use eyre::Context;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use result::Result;
 
 mod bytes_ext;
 pub mod chunk;
 mod result;
 use crate::chunk::Chunk;
-use bytes_ext::BufResult;
-use result::Result;
+
+#[cfg(test)]
+mod tests;
 
 #[repr(u32)]
 #[derive(PartialEq, Eq, Debug, IntoPrimitive, TryFromPrimitive)]
@@ -27,23 +30,4 @@ pub fn parse_file(mut file: Bytes) -> Result<Chunk> {
     println!("File type: {:?}", file_type);
 
     Chunk::parse(&mut file, None)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_file_types() {
-        match FileTypes::try_from(0x00005A52) {
-            Ok(filetype) => assert_eq!(filetype, FileTypes::RZ),
-            Err(e) => panic!("{}", e),
-        }
-    }
-
-    // #[test]
-    // fn test_l1r1() {
-    //     let bytes = Bytes::from_static(include_bytes!("../test_data/l1r1.p3d"));
-    //     parse_file(bytes).unwrap();
-    // }
 }

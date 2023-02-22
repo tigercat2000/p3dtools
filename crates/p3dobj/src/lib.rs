@@ -1,4 +1,4 @@
-use p3dparse::chunk::{data::types::shared::Vector3, types::ChunkType, Chunk};
+use p3dparse::chunk::{data::kinds::shared::Vector3, type_identifiers::ChunkType, Chunk};
 
 pub struct FullMesh {
     pub vertices: Vec<Vector3>,
