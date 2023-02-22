@@ -1,7 +1,7 @@
 use crate::{
     bytes_ext::BufResult,
     chunk::{
-        data::{helpers::pure3d_read_string, parse_trait::Parse, types::shared::Matrix},
+        data::{helpers::pure3d_read_string, kinds::shared::Matrix, parse_trait::Parse},
         type_identifiers::ChunkType,
     },
     Result,

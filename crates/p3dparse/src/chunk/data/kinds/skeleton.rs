@@ -1,7 +1,7 @@
 use crate::{
     bytes_ext::BufResult,
     chunk::{
-        data::{parse_trait::Parse, types::shared::Matrix},
+        data::{kinds::shared::Matrix, parse_trait::Parse},
         type_identifiers::ChunkType,
     },
     Result,

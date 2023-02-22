@@ -1,8 +1,7 @@
 use crate::{
     chunk::{
         data::{
-            parse_trait::Parse,
-            types::{
+            kinds::{
                 animation::{Animation, AnimationGroup, AnimationGroupList, AnimationSize},
                 channel::{Channel, ChannelInterpolation},
                 collision::{
@@ -56,6 +55,7 @@ use crate::{
                 texture::Texture,
                 version::Version,
             },
+            parse_trait::Parse,
         },
         type_identifiers::ChunkType,
     },
@@ -65,8 +65,8 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
 mod helpers;
+pub mod kinds;
 mod parse_trait;
-pub mod types;
 
 #[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
 #[allow(dead_code)]

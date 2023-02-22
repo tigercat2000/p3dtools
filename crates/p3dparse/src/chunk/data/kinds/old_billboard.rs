@@ -3,8 +3,8 @@ use crate::{
     chunk::{
         data::{
             helpers,
+            kinds::shared::{Colour, Quaternion, Vector2, Vector3},
             parse_trait::Parse,
-            types::shared::{Colour, Quaternion, Vector2, Vector3},
         },
         type_identifiers::ChunkType,
     },

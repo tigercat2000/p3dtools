@@ -3,8 +3,8 @@ use crate::{
     chunk::{
         data::{
             helpers::{pure3d_read_string, read_colour, read_vec2, read_vec3},
+            kinds::shared::{Colour, Vector2, Vector3},
             parse_trait::Parse,
-            types::shared::{Colour, Vector2, Vector3},
         },
         type_identifiers::ChunkType,
     },
