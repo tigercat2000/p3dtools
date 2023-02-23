@@ -1,8 +1,6 @@
 pub mod data;
 pub mod type_identifiers;
 
-use std::ptr::NonNull;
-
 use crate::{
     bytes_ext::BufResult,
     chunk::{data::ChunkData, type_identifiers::ChunkType},
@@ -15,25 +13,34 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub struct Chunk {
     pub typ: ChunkType,
-    pub children: Vec<Chunk>,
+    pub parent: Option<usize>,
+    pub children: Vec<usize>,
     pub data: ChunkData,
-    #[serde(skip_serializing, skip_deserializing)]
-    pub parent: Option<NonNull<Chunk>>,
 }
 
 impl Chunk {
-    pub fn get_lineage(&self) -> String {
+    pub fn get_lineage(&self, vec: &[Chunk]) -> String {
         let mut string = self.get_name();
         let mut target: &Chunk = self;
         while let Some(parent) = target.parent {
-            let parent = unsafe { parent.as_ref() };
+            let parent = vec
+                .get(parent)
+                .expect("Invariant violated: Child thought it had a parent at an invalid index!");
             string.push_str(&format!("->{}", parent.get_name()));
             target = parent;
         }
         string
     }
 
-    pub fn parse(bytes: &mut Bytes, parent: Option<NonNull<Chunk>>) -> Result<Chunk> {
+    pub fn parse_root(bytes: &mut Bytes) -> Result<Vec<Chunk>> {
+        let mut vec = Vec::new();
+
+        Chunk::parse(bytes, &mut vec, None)?;
+
+        Ok(vec)
+    }
+
+    pub fn parse(bytes: &mut Bytes, vec: &mut Vec<Chunk>, parent: Option<usize>) -> Result<usize> {
         // Note: C# BinaryReader is always LE unless otherwise stated
         // First 4 bytes indicate the chunk type
         let typ: ChunkType = bytes.safe_get_u32_le()?.try_into()?;
@@ -47,13 +54,6 @@ impl Chunk {
             return Err(eyre!("Data size is greater than total size"));
         }
 
-        // eprintln!(
-        //     "Parsing chunk of type {:?}, data size: {}, children size: {}",
-        //     typ,
-        //     data_size,
-        //     total_size - data_size
-        // );
-
         // We expect to read data_size - 12 bytes in data.
         let expected_parse_size = (data_size - 12) as usize;
         // So we'll only give that many bytes to the ChunkData parser.
@@ -66,7 +66,7 @@ impl Chunk {
                 let lineage = format!(
                     "Error: Could not parse data. Lineage Info: {}",
                     if let Some(parent) = parent {
-                        unsafe { parent.as_ref().get_lineage() }
+                        vec.get(parent).unwrap().get_lineage(vec)
                     } else {
                         "Unknown".to_owned()
                     }
@@ -75,20 +75,24 @@ impl Chunk {
             }
         };
 
-        let mut chunk = Chunk {
+        vec.push(Chunk {
             typ,
             children: Vec::new(),
             data,
             parent,
-        };
+        });
+
+        let index = vec.len() - 1;
+
+        let mut children = Vec::new();
 
         // It's okay if we fail to parse a chunk because we always know the size and can keep our framing intact.
         if !data_slice.is_empty() {
-            eprintln!(
-                "Warning: Chunk {} was expected to parse {:?} bytes but only parsed {:?}, data result: {:?}",
-                &chunk.get_lineage(), expected_parse_size, expected_parse_size - data_slice.len(), chunk.data
-            );
-            let actually_consumed = (expected_parse_size - data_slice.len()) as usize;
+            // eprintln!(
+            //     "Warning: Chunk {} was expected to parse {:?} bytes but only parsed {:?}, data result: {:?}",
+            //     &chunk.get_lineage(), expected_parse_size, expected_parse_size - data_slice.len(), chunk.data
+            // );
+            let actually_consumed = expected_parse_size - data_slice.len();
             // Our original bytes slice has already consumed the 12 byte header, so we have to subtract it here
             // Potential Children Size can never be 0 because we know we have leftover data in the data slice.
             let potential_children_size = total_size as usize - actually_consumed - 12;
@@ -108,19 +112,19 @@ impl Chunk {
             let mut parsed_so_far = 0;
             while parsed_so_far < potential_children_size {
                 let before_parse = potential_children_slice.len();
-                match Chunk::parse(&mut potential_children_slice, Some((&chunk).into())) {
+                match Chunk::parse(&mut potential_children_slice, vec, Some(index)) {
                     Ok(child) => {
                         eprintln!(
-                            "Recovery: We sucessfully parsed a misaligned child {}",
-                            &child.get_lineage()
+                            "Recovery: We sucessfully parsed a misaligned child at index {}",
+                            child // vec.get(child).unwrap().get_lineage()
                         );
-                        chunk.children.push(child);
+                        children.push(child);
                     }
                     Err(e) => {
-                        eprintln!(
-                            "Recovery: We failed to parse a misaligned child for {}",
-                            &chunk.get_lineage()
-                        );
+                        // eprintln!(
+                        //     "Recovery: We failed to parse a misaligned child for {}",
+                        //     &chunk.get_lineage()
+                        // );
                         eprintln!("Recovery: This was caused by: {:?}", e);
                         eprintln!("-- Full Data Hexdump --");
                         hexdump::hexdump(&original_data_slice);
@@ -139,30 +143,65 @@ impl Chunk {
         bytes.safe_advance(expected_parse_size)?;
 
         // Only parse children if we didn't do so already in fallback
-        if chunk.children.is_empty() {
+        if children.is_empty() {
             // Indicates we have some children to parse.
             if total_size > data_size {
                 let total_children_size = (total_size - data_size) as usize;
                 let mut parsed_so_far = 0;
                 while parsed_so_far < total_children_size {
                     let before_parse = bytes.len();
-                    chunk
-                        .children
-                        .push(Chunk::parse(bytes, Some((&chunk).into()))?);
+                    let child = Chunk::parse(bytes, vec, Some(index))?;
+                    children.push(child);
                     let after_parse = bytes.len();
                     parsed_so_far += before_parse - after_parse;
                 }
             }
         }
 
-        Ok(chunk)
+        vec.get_mut(index).unwrap().children = children;
+
+        Ok(index)
     }
 
     pub fn get_name(&self) -> String {
         format!("{}({:?})", self.data.get_name(), self.typ)
     }
 
-    pub fn get_children_of_type(&self, typ: ChunkType) -> impl Iterator<Item = &Chunk> {
-        self.children.iter().filter(move |c| c.typ == typ)
+    pub fn get_child<'a>(&self, vec: &'a [Chunk], index: usize) -> Result<&'a Chunk> {
+        let child_index = self
+            .children
+            .get(index)
+            .ok_or_else(|| eyre!("Invalid child index"))?;
+
+        vec.iter()
+            .enumerate()
+            .find(|(index, _)| index == child_index)
+            .map(|(_, chunk)| chunk)
+            .ok_or_else(|| {
+                panic!("Invariant violated: Chunk thought it had a child at an invalid index")
+            })
+    }
+
+    pub fn get_children<'a>(&self, vec: &'a [Chunk]) -> Vec<&'a Chunk> {
+        vec.iter()
+            .enumerate()
+            .filter(|(index, _)| self.children.contains(index))
+            .map(|(_, chunk)| chunk)
+            .collect()
+    }
+
+    // pub fn get_children_of_type(&self, typ: ChunkType) -> impl Iterator<Item = &Chunk> {
+    //     self.children.iter().filter(move |c| c.typ == typ)
+    // }
+}
+
+pub trait VecChunkExtension {
+    fn get_root(&self) -> Result<&Chunk>;
+}
+
+impl VecChunkExtension for Vec<Chunk> {
+    fn get_root(&self) -> Result<&Chunk> {
+        self.get(0)
+            .ok_or_else(|| eyre!("Vec does not contain root chunk"))
     }
 }

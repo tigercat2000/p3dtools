@@ -597,6 +597,9 @@ impl ChunkData {
 
     pub fn get_name(&self) -> String {
         match self {
+            ChunkData::Texture(name, _, _) => name.0.clone(),
+            ChunkData::Image(name, _, _) => name.0.clone(),
+            ChunkData::Shader(name, _, _) => name.0.clone(),
             ChunkData::OldBaseEmitter(_, name, _) => name.0.clone(),
             ChunkData::OldSpriteEmitter(_, name, _) => name.0.clone(),
             ChunkData::OldParticleSystemFactory(_, name, _) => name.0.clone(),
