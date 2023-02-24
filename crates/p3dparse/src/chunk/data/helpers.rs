@@ -7,7 +7,10 @@ pub fn pure3d_read_string(bytes: &mut Bytes) -> Result<String> {
     let count = bytes.safe_get_u8()?;
     let mut string_bytes = Vec::with_capacity(count as usize);
     for _ in 0..count {
-        string_bytes.push(bytes.safe_get_u8()?);
+        let byte = bytes.safe_get_u8()?;
+        if byte.is_ascii() && byte != 0 {
+            string_bytes.push(byte);
+        }
     }
     Ok(String::from_utf8(string_bytes)?)
 }
@@ -15,7 +18,10 @@ pub fn pure3d_read_string(bytes: &mut Bytes) -> Result<String> {
 pub fn pure3d_read_fourcc(bytes: &mut Bytes) -> Result<String> {
     let mut string_bytes = Vec::with_capacity(4);
     for _ in 0..4 {
-        string_bytes.push(bytes.safe_get_u8()?);
+        let byte = bytes.safe_get_u8()?;
+        if byte.is_ascii() && byte != 0 {
+            string_bytes.push(byte);
+        }
     }
     Ok(String::from_utf8(string_bytes)?)
 }

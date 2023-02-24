@@ -11,6 +11,7 @@ use crate::{
     Result,
 };
 use bytes::Bytes;
+use modular_bitfield::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
@@ -48,31 +49,76 @@ pub enum PrimitiveType {
     LineStrip = 0x3,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[allow(clippy::upper_case_acronyms)]
+#[bitfield(bits = 32)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u32)]
-#[allow(dead_code)]
-pub enum VertexType {
-    UVs = 0x0001,
-    UVs2 = 0x0002,
-    UVs3 = 0x0004,
-    UVs4 = 0x0008,
-    Normals = 0x0010,
-    Colours = 0x0020,
-    Matrices = 0x0080,
-    Weights = 0x0100,
-    Unknown = 0x2000,
+pub struct VertexType {
+    pub uv_count: B4,
+    // next 4
+    pub has_normal: bool,
+    pub has_colour: bool,
+    pub has_specular: bool,
+    pub has_indices: bool,
+    // next 4
+    pub has_weight: bool,
+    pub has_size: bool,
+    pub has_w: bool,
+    pub has_binormal: bool,
+    // next 3
+    pub has_tangent: bool,
+    pub has_position: bool,
+    pub has_colour2: bool,
+    // colour count
+    pub colour_couint: B3,
+    // rest
+    #[skip]
+    unused: B14,
+}
+
+impl Serialize for VertexType {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u32(u32::from(self.clone()))
+    }
+}
+
+impl<'de> Deserialize<'de> for VertexType {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct VertexTypeVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for VertexTypeVisitor {
+            type Value = VertexType;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("an integer between 0 and 2^32")
+            }
+
+            fn visit_u32<E>(self, v: u32) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(VertexType::from(v))
+            }
+        }
+
+        deserializer.deserialize_u32(VertexTypeVisitor)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct OldPrimGroup {
     pub shader_name: String,
     pub primitive_type: PrimitiveType,
+    /// Bitfield of [`VertexType`]
+    pub vertex_types: VertexType,
     pub num_vertices: u32,
     pub num_indices: u32,
     pub num_matrices: u32,
-    /// Bitfield of [`VertexType`]
-    pub vertex_types: u32,
 }
 
 impl Parse for OldPrimGroup {
@@ -80,10 +126,10 @@ impl Parse for OldPrimGroup {
         Ok(OldPrimGroup {
             shader_name: pure3d_read_string(bytes)?,
             primitive_type: bytes.safe_get_u32_le()?.try_into()?,
+            vertex_types: bytes.safe_get_u32_le()?.into(),
             num_vertices: bytes.safe_get_u32_le()?,
             num_indices: bytes.safe_get_u32_le()?,
             num_matrices: bytes.safe_get_u32_le()?,
-            vertex_types: bytes.safe_get_u32_le()?,
         })
     }
 }

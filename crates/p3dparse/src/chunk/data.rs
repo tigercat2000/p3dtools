@@ -595,15 +595,16 @@ impl ChunkData {
         }
     }
 
-    pub fn get_name(&self) -> String {
+    pub fn get_name(&self) -> Option<Name> {
         match self {
-            ChunkData::Texture(name, _, _) => name.0.clone(),
-            ChunkData::Image(name, _, _) => name.0.clone(),
-            ChunkData::Shader(name, _, _) => name.0.clone(),
-            ChunkData::OldBaseEmitter(_, name, _) => name.0.clone(),
-            ChunkData::OldSpriteEmitter(_, name, _) => name.0.clone(),
-            ChunkData::OldParticleSystemFactory(_, name, _) => name.0.clone(),
-            _ => "".into(),
+            ChunkData::Texture(name, _, _) => Some(name.clone()),
+            ChunkData::Image(name, _, _) => Some(name.clone()),
+            ChunkData::Shader(name, _, _) => Some(name.clone()),
+            ChunkData::Mesh(name, _, _) => Some(name.clone()),
+            ChunkData::OldBaseEmitter(_, name, _) => Some(name.clone()),
+            ChunkData::OldSpriteEmitter(_, name, _) => Some(name.clone()),
+            ChunkData::OldParticleSystemFactory(_, name, _) => Some(name.clone()),
+            _ => None,
         }
     }
 }
