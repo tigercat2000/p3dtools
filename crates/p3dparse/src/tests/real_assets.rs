@@ -348,12 +348,12 @@ fn test_mesh() {
                                         assert_float_eq!(
                                             *pos.positions.first().unwrap(),
                                             (-0.4554235, -0.3471976, -0.5358086),
-                                            abs <= (0.1, 0.1, 0.1)
+                                            abs <= (0.000001, 0.000001, 0.000001)
                                         );
                                         assert_float_eq!(
                                             *pos.positions.last().unwrap(),
                                             (0.4086182, -0.3471976, -0.4072655),
-                                            abs <= (0.1, 0.1, 0.1)
+                                            abs <= (0.000001, 0.000001, 0.000001)
                                         );
                                     }
                                     _ => panic!("Invalid data for {:?}", chunk.typ),
@@ -378,12 +378,12 @@ fn test_mesh() {
                                         assert_float_eq!(
                                             *normals.normals.first().unwrap(),
                                             (-0.7941978, 0.07634445, -0.6028444),
-                                            abs <= (0.1, 0.1, 0.1)
+                                            abs <= (0.000001, 0.000001, 0.000001)
                                         );
                                         assert_float_eq!(
                                             *normals.normals.last().unwrap(),
                                             (0.7470749, -0.1463135, 0.6484377),
-                                            abs <= (0.1, 0.1, 0.1)
+                                            abs <= (0.000001, 0.000001, 0.000001)
                                         );
                                     }
                                     _ => panic!("Invalid data for {:?}", chunk.typ),
@@ -398,12 +398,12 @@ fn test_mesh() {
                                         assert_float_eq!(
                                             *uvs.UVs.first().unwrap(),
                                             (0.2872413, 0.7369288),
-                                            abs <= (0.1, 0.1)
+                                            abs <= (0.000001, 0.000001)
                                         );
                                         assert_float_eq!(
                                             *uvs.UVs.last().unwrap(),
                                             (0.7021316, 0.6979652),
-                                            abs <= (0.1, 0.1)
+                                            abs <= (0.000001, 0.000001)
                                         );
                                     }
                                     _ => panic!("Invalid data for {:?}", chunk.typ),
@@ -427,9 +427,47 @@ fn test_mesh() {
                         }
                     }
                 }
-                1 => {}
-                2 => {}
-                3 => {}
+                1 => {
+                    assert_eq!(chunk.typ, ChunkType::BBox);
+                    match &chunk.data {
+                        ChunkData::BoundingBox(bbox) => {
+                            assert_float_eq!(
+                                bbox.low,
+                                (-0.4554235, -0.4327585, -0.6202587),
+                                abs <= (0.000001, 0.000001, 0.000001)
+                            );
+                            assert_float_eq!(
+                                bbox.high,
+                                (0.4086182, 0.3977017, -0.3228154),
+                                abs <= (0.000001, 0.000001, 0.000001)
+                            );
+                        }
+                        _ => panic!("Invalid data for {:?}", chunk.typ),
+                    }
+                }
+                2 => {
+                    assert_eq!(chunk.typ, ChunkType::BSphere);
+                    match &chunk.data {
+                        ChunkData::BoundingSphere(bsphere) => {
+                            assert_float_eq!(
+                                bsphere.centre,
+                                (-0.02340266, -0.01752838, -0.4715371),
+                                abs <= (0.000001, 0.000001, 0.000001)
+                            );
+                            assert_float_eq!(bsphere.radius, 0.5535234, abs <= 0.000001);
+                        }
+                        _ => panic!("Invalid data for {:?}", chunk.typ),
+                    }
+                }
+                3 => {
+                    assert_eq!(chunk.typ, ChunkType::RenderStatus);
+                    match &chunk.data {
+                        ChunkData::RenderStatus(status) => {
+                            assert_eq!(status.cast_shadow, 1);
+                        }
+                        _ => panic!("Invalid data for {:?}", chunk.typ),
+                    }
+                }
                 _ => unreachable!("More chunks were present than expected"),
             }
         }
