@@ -2,3 +2,4 @@
 *.obj
 *.mtl
 *.png
+out/

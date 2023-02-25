@@ -2,6 +2,7 @@ use itertools::Itertools;
 use p3dparse::chunk::{
     data::{
         kinds::{
+            image::ImageFormat,
             mesh::PrimitiveType,
             shader_param::{ShaderParam, ShaderParamValue},
             shared::{Vector2, Vector3},
@@ -40,7 +41,11 @@ impl Shader {
         Ok(Shader { name, params })
     }
 
-    pub fn write_mtl<W: Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
+    pub fn write_mtl<W: Write>(
+        &self,
+        mut writer: W,
+        textures: &HashMap<String, (ImageFormat, Vec<u8>)>,
+    ) -> Result<(), std::io::Error> {
         writeln!(writer, "newmtl {}", self.name)?;
         if let Some(inner) = self.params.iter().find(|f| f.param == "AMBI") {
             if let ShaderParamValue::Colour(color) = &inner.value {
@@ -80,8 +85,14 @@ impl Shader {
         }
         if let Some(inner) = self.params.iter().find(|f| f.param == "TEX") {
             if let ShaderParamValue::Texture(tex) = &inner.value {
+                let extension = if let Some((format, _)) = textures.get(tex) {
+                    format.get_extension()
+                } else {
+                    eprintln!("Unable to find texture {:?}", tex);
+                    "png"
+                };
                 // TODO: Check the actual type of the asset it's referring to
-                writeln!(writer, "map_Kd {}.png", tex)?;
+                writeln!(writer, "map_Kd {}.{}", tex, extension)?;
             }
         }
         Ok(())
@@ -166,6 +177,7 @@ pub struct FullMesh {
     pub name: String,
     pub prim_groups: Vec<PrimGroup>,
     pub shaders: HashMap<String, Shader>,
+    pub textures: HashMap<String, (ImageFormat, Vec<u8>)>,
 }
 
 impl FullMesh {
@@ -174,6 +186,7 @@ impl FullMesh {
             name: "".to_owned(),
             prim_groups: Vec::new(),
             shaders: HashMap::new(),
+            textures: HashMap::new(),
         };
 
         assert_eq!(mesh.typ, ChunkType::Mesh);
@@ -291,6 +304,40 @@ impl FullMesh {
             full_mesh.prim_groups.push(pgroup);
         }
 
+        full_mesh.textures = file
+            .iter()
+            .filter(|f| f.typ == ChunkType::Texture)
+            // Filter for valid data & in active shader list
+            .filter_map(|f| {
+                if let ChunkData::Texture(name, _, _) = &f.data {
+                    // Make sure
+                    if full_mesh.shaders.values().any(|f| {
+                        f.params.iter().any(|p| {
+                            p.param == "TEX" && p.value == ShaderParamValue::Texture(name.0.clone())
+                        })
+                    }) {
+                        Some((name.0.clone(), f))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .filter_map(|(name, f)| {
+                if let Ok(image_chunk) = f.get_child(file, 0) {
+                    if let ChunkData::Image(_, _, data) = &image_chunk.data {
+                        if let Ok(image_raw) = image_chunk.get_child(file, 0) {
+                            if let ChunkData::ImageRaw(raw) = &image_raw.data {
+                                return Some((name, (data.image_format, raw.data.clone())));
+                            }
+                        }
+                    }
+                }
+                None
+            })
+            .collect();
+
         Ok(full_mesh)
     }
 
@@ -318,7 +365,15 @@ impl FullMesh {
 
         let mut mtl = BufWriter::new(File::create(path.with_extension("mtl"))?);
         for shader in self.shaders.values() {
-            shader.write_mtl(&mut mtl)?;
+            shader.write_mtl(&mut mtl, &self.textures)?;
+        }
+
+        for (name, (format, image)) in &self.textures {
+            let mut pic_writer = BufWriter::new(File::create(path.with_file_name(
+                // Format here instead of with_extension is deliberate because we want to create files like "santa2.bmp.png" which path will try and "fix"
+                format!("{}.{}", name, format.get_extension()),
+            ))?);
+            pic_writer.write_all(image)?;
         }
 
         Ok(())
