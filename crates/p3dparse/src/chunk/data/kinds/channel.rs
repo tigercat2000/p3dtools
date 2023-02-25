@@ -165,6 +165,18 @@ impl Parse for Channel {
                     values,
                 })
             }
+            ChunkType::CompressedQuaternionChannel => {
+                let mut values = Vec::with_capacity(frame_count);
+                for _ in 0..frame_count {
+                    values.push(helpers::read_compressed_quaternion(bytes)?)
+                }
+                let values = ChannelValues::Quaternion(values);
+                Ok(Channel {
+                    param,
+                    frames,
+                    values,
+                })
+            }
             ChunkType::ColourChannel => {
                 let mut values = Vec::with_capacity(frame_count);
                 for _ in 0..frame_count {

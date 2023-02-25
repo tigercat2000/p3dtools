@@ -47,6 +47,17 @@ pub fn read_quaternion(bytes: &mut Bytes) -> Result<Quaternion> {
     ))
 }
 
+const QUATERNION_INVERSE_COMPRESSION_FACTOR: f32 = 1.0 / 32767.0;
+
+pub fn read_compressed_quaternion(bytes: &mut Bytes) -> Result<Quaternion> {
+    Ok((
+        (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
+        (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
+        (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
+        (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
+    ))
+}
+
 pub fn read_colour(bytes: &mut Bytes) -> Result<Colour> {
     Ok((
         bytes.safe_get_u8()?,

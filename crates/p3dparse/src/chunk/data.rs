@@ -10,6 +10,7 @@ use crate::{
                     CollisionVolume, CollisionVolumeOwner, IntersectDSG, TerrainTypeList,
                 },
                 explosion::BreakableObject,
+                export::{P3DExportInfoNamedInt, P3DExportInfoNamedString},
                 gameattr::{GameAttr, GameAttrParam},
                 image::{Image, ImageRaw},
                 locator::{WBLocator, WBMatrix, WBRail, WBSpline, WBTriggerVolume},
@@ -17,8 +18,9 @@ use crate::{
                     BinormalList, ColourList, CompositeDrawable, CompositeDrawableEffect,
                     CompositeDrawableEffectList, CompositeDrawableProp, CompositeDrawablePropList,
                     CompositeDrawableSkin, CompositeDrawableSkinList, CompositeDrawableSortOrder,
-                    IndexList, Mesh, NormalList, OldPrimGroup, PackedNormalList, PositionList,
-                    RenderStatus, TangentList, UVList,
+                    IndexList, MatrixList, MatrixPalette, Mesh, NormalList, OldPrimGroup,
+                    PackedNormalList, PositionList, RenderStatus, Skin, TangentList, UVList,
+                    WeightList,
                 },
                 name::Name,
                 object::{
@@ -42,6 +44,7 @@ use crate::{
                     ObjectAttributes, StatePropCallbackData, StatePropDataV1, StatePropEventData,
                     StatePropFrameControllerData, StatePropStateDataV1, StatePropVisibilitiesData,
                 },
+                pure3d_other::P3DCamera,
                 scenegraph::{
                     ScenegraphAttachment, ScenegraphAttachmentPoint, ScenegraphBranch,
                     ScenegraphCamera, ScenegraphDrawable, ScenegraphLightGroup,
@@ -109,6 +112,7 @@ pub enum ChunkData {
     SkeletonJointBonePreserve(SkeletonJointBonePreserve),
     // -- Mesh -- //
     Mesh(Name, Version, Mesh),
+    Skin(Name, Version, Skin),
     OldPrimGroup(Version, OldPrimGroup),
     PositionList(PositionList),
     NormalList(NormalList),
@@ -118,6 +122,9 @@ pub enum ChunkData {
     UVList(UVList),
     ColourList(ColourList),
     IndexList(IndexList),
+    MatrixList(MatrixList),
+    MatrixPalette(MatrixPalette),
+    WeightList(WeightList),
     RenderStatus(RenderStatus),
     CompositeDrawable(Name, CompositeDrawable),
     CompositeDrawableEffect(Name, CompositeDrawableEffect),
@@ -185,6 +192,12 @@ pub enum ChunkData {
     WBMatrix(WBMatrix),
     WBSpline(Name, WBSpline),
     WBRail(Name, WBRail),
+    // -- Export Info -- //
+    P3DExportInfo(Name),
+    P3DExportInfoNamedString(Name, P3DExportInfoNamedString),
+    P3DExportInfoNamedInt(Name, P3DExportInfoNamedInt),
+    // -- P3D Other -- //
+    P3DCamera(Name, Version, P3DCamera),
     Unknown,
 }
 
@@ -279,6 +292,7 @@ impl ChunkData {
             | ChunkType::Vector2DOFChannel
             | ChunkType::Vector3DOFChannel
             | ChunkType::QuaternionChannel
+            | ChunkType::CompressedQuaternionChannel
             | ChunkType::ColourChannel
             | ChunkType::BoolChannel => Ok(ChunkData::Channel(
                 Version::parse(bytes, typ)?,
@@ -333,6 +347,11 @@ impl ChunkData {
                 Version::parse(bytes, typ)?,
                 Mesh::parse(bytes, typ)?,
             )),
+            ChunkType::Skin => Ok(ChunkData::Skin(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Skin::parse(bytes, typ)?,
+            )),
             ChunkType::OldPrimGroup => Ok(ChunkData::OldPrimGroup(
                 Version::parse(bytes, typ)?,
                 OldPrimGroup::parse(bytes, typ)?,
@@ -351,6 +370,11 @@ impl ChunkData {
             ChunkType::UVList => Ok(ChunkData::UVList(UVList::parse(bytes, typ)?)),
             ChunkType::ColourList => Ok(ChunkData::ColourList(ColourList::parse(bytes, typ)?)),
             ChunkType::IndexList => Ok(ChunkData::IndexList(IndexList::parse(bytes, typ)?)),
+            ChunkType::MatrixList => Ok(ChunkData::MatrixList(MatrixList::parse(bytes, typ)?)),
+            ChunkType::MatrixPalette => {
+                Ok(ChunkData::MatrixPalette(MatrixPalette::parse(bytes, typ)?))
+            }
+            ChunkType::WeightList => Ok(ChunkData::WeightList(WeightList::parse(bytes, typ)?)),
             ChunkType::BBox => Ok(ChunkData::BoundingBox(BoundingBox::parse(bytes, typ)?)),
             ChunkType::BSphere => Ok(ChunkData::BoundingSphere(BoundingSphere::parse(
                 bytes, typ,
@@ -585,6 +609,22 @@ impl ChunkData {
             ChunkType::StaticPhysicsDSG => Ok(ChunkData::StaticPhysicsDSG(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
+            )),
+            // -- Export Info -- //
+            ChunkType::P3DExportInfo => Ok(ChunkData::P3DExportInfo(Name::parse(bytes, typ)?)),
+            ChunkType::P3DExportInfoNamedString => Ok(ChunkData::P3DExportInfoNamedString(
+                Name::parse(bytes, typ)?,
+                P3DExportInfoNamedString::parse(bytes, typ)?,
+            )),
+            ChunkType::P3DExportInfoNamedInt => Ok(ChunkData::P3DExportInfoNamedInt(
+                Name::parse(bytes, typ)?,
+                P3DExportInfoNamedInt::parse(bytes, typ)?,
+            )),
+            // -- P3D Other -- //
+            ChunkType::P3DCamera => Ok(ChunkData::P3DCamera(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                P3DCamera::parse(bytes, typ)?,
             )),
             // -- Other produces error (eventually will produce Unknown) -- //
             typ => {

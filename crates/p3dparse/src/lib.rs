@@ -23,11 +23,9 @@ pub enum FileTypes {
 }
 
 pub fn parse_file(mut file: Bytes) -> Result<Vec<Chunk>> {
-    let mut file_clone = file.clone();
-    let file_type =
-        FileTypes::try_from(file_clone.safe_get_u32_le()?).context("Unrecognized file format")?;
-
-    println!("File type: {:?}", file_type);
+    // let mut file_clone = file.clone();
+    // let file_type =
+    //     FileTypes::try_from(file_clone.safe_get_u32_le()?).context("Unrecognized file format")?;
 
     Chunk::parse_root(&mut file)
 }

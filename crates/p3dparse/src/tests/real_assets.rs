@@ -492,3 +492,25 @@ fn test_mesh() {
         eprintln!("Skipping test due to inability to find assets.");
     }
 }
+
+#[test]
+fn test_real_homer_c() {
+    // Actual assertions
+    if let Some(mesh) = get_asset("homer_C.p3d") {
+        let file = parse_file(Bytes::from(mesh)).unwrap();
+        let root = file.get_root().unwrap();
+        assert_eq!(root.typ, ChunkType::DataFile);
+        assert_eq!(root.data, ChunkData::None);
+
+        assert!(!file.iter().enumerate().any(|(index, c)| {
+            if let ChunkData::Unknown = c.data {
+                eprintln!("Test failure: Unknown chunk at index {}", index);
+                true
+            } else {
+                false
+            }
+        }));
+    } else {
+        eprintln!("Skipping test due to inability to find assets.");
+    }
+}

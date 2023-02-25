@@ -28,6 +28,21 @@ impl Parse for Mesh {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Skin {
+    pub skeleton_name: String,
+    pub num_prim_groups: u32,
+}
+
+impl Parse for Skin {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(Skin {
+            skeleton_name: pure3d_read_string(bytes)?,
+            num_prim_groups: bytes.safe_get_u32_le()?,
+        })
+    }
+}
+
 #[derive(
     Clone,
     Copy,
@@ -283,6 +298,60 @@ impl Parse for IndexList {
         }
 
         Ok(IndexList { indices })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct MatrixList {
+    pub matrices: Vec<u32>,
+}
+
+impl Parse for MatrixList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.safe_get_u32_le()? as usize;
+
+        let mut matrices = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            matrices.push(bytes.safe_get_u32_le()?);
+        }
+
+        Ok(MatrixList { matrices })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct MatrixPalette {
+    pub matrices: Vec<u32>,
+}
+
+impl Parse for MatrixPalette {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.safe_get_u32_le()? as usize;
+
+        let mut matrices = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            matrices.push(bytes.safe_get_u32_le()?);
+        }
+
+        Ok(MatrixPalette { matrices })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct WeightList {
+    pub weights: Vec<Vector3>,
+}
+
+impl Parse for WeightList {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        let capacity = bytes.safe_get_u32_le()? as usize;
+
+        let mut weights = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            weights.push(read_vec3(bytes)?);
+        }
+
+        Ok(WeightList { weights })
     }
 }
 
