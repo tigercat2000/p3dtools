@@ -30,6 +30,7 @@ impl Parse for Mesh {
 
 #[derive(
     Clone,
+    Copy,
     Debug,
     PartialEq,
     Eq,
