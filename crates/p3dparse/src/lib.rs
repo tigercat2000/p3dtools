@@ -1,6 +1,4 @@
 pub use bytes::Bytes;
-use bytes_ext::BufResult;
-use eyre::Context;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use result::Result;
 
