@@ -361,7 +361,7 @@ mod test {
                     relative_index: 0,
                 },
                 parent: None,
-                children: vec![1],
+                children: vec![1, 5],
             },
             Chunk {
                 typ: ChunkType::Mesh,
@@ -413,7 +413,7 @@ mod test {
                 typ: ChunkType::IndexList,
                 data: ChunkData::IndexList(kinds::mesh::IndexList { indices: vec![1] }),
                 span: Span {
-                    absolute_index: 3,
+                    absolute_index: 4,
                     relative_index: 1,
                 },
                 parent: Some(2),
@@ -433,7 +433,7 @@ mod test {
                     },
                 ),
                 span: Span {
-                    absolute_index: 4,
+                    absolute_index: 5,
                     relative_index: 1,
                 },
                 parent: Some(0),
