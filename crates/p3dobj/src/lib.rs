@@ -3,6 +3,7 @@ use p3dparse::chunk::{
     data::{
         kinds::{
             mesh::PrimitiveType,
+            shader_param::{ShaderParam, ShaderParamValue},
             shared::{Vector2, Vector3},
         },
         ChunkData,
@@ -10,7 +11,82 @@ use p3dparse::chunk::{
     type_identifiers::ChunkType,
     Chunk,
 };
-use std::{fs::File, io::BufWriter, io::Write, path::Path};
+use std::{collections::HashMap, fs::File, io::BufWriter, io::Write, path::Path};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Shader {
+    pub name: String,
+    pub params: Vec<ShaderParam>,
+}
+
+impl Shader {
+    pub fn parse(mesh: &Chunk, file: &[Chunk]) -> Result<Self, std::io::Error> {
+        assert_eq!(mesh.typ, ChunkType::Shader);
+
+        let name = if let ChunkData::Shader(name, _, _) = &mesh.data {
+            name.0.clone()
+        } else {
+            panic!("Invalid ChunkData for Shader");
+        };
+
+        let mut params = Vec::new();
+
+        for param in mesh.get_children(file) {
+            if let ChunkData::ShaderParam(param) = &param.data {
+                params.push(param.clone());
+            }
+        }
+
+        Ok(Shader { name, params })
+    }
+
+    pub fn write_mtl<W: Write>(&self, mut writer: W) -> Result<(), std::io::Error> {
+        writeln!(writer, "newmtl {}", self.name)?;
+        if let Some(inner) = self.params.iter().find(|f| f.param == "AMBI") {
+            if let ShaderParamValue::Colour(color) = &inner.value {
+                writeln!(
+                    writer,
+                    "Ka {} {} {}",
+                    (color.0 as f32) / 255.0,
+                    (color.1 as f32) / 255.0,
+                    (color.2 as f32) / 255.0
+                )?;
+            }
+        }
+        if let Some(inner) = self.params.iter().find(|f| f.param == "DIFF") {
+            if let ShaderParamValue::Colour(color) = &inner.value {
+                writeln!(
+                    writer,
+                    "Kd {} {} {}",
+                    (color.0 as f32) / 255.0,
+                    (color.1 as f32) / 255.0,
+                    (color.2 as f32) / 255.0
+                )?;
+            }
+        } else {
+            // We always need a diffuse
+            writeln!(writer, "Kd 1 1 1")?;
+        }
+        if let Some(inner) = self.params.iter().find(|f| f.param == "SPEC") {
+            if let ShaderParamValue::Colour(color) = &inner.value {
+                writeln!(
+                    writer,
+                    "Ks {} {} {}",
+                    (color.0 as f32) / 255.0,
+                    (color.1 as f32) / 255.0,
+                    (color.2 as f32) / 255.0
+                )?;
+            }
+        }
+        if let Some(inner) = self.params.iter().find(|f| f.param == "TEX") {
+            if let ShaderParamValue::Texture(tex) = &inner.value {
+                // TODO: Check the actual type of the asset it's referring to
+                writeln!(writer, "map_Kd {}.png", tex)?;
+            }
+        }
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct PrimGroup {
@@ -89,6 +165,7 @@ impl PrimGroup {
 pub struct FullMesh {
     pub name: String,
     pub prim_groups: Vec<PrimGroup>,
+    pub shaders: HashMap<String, Shader>,
 }
 
 impl FullMesh {
@@ -96,6 +173,7 @@ impl FullMesh {
         let mut full_mesh = FullMesh {
             name: "".to_owned(),
             prim_groups: Vec::new(),
+            shaders: HashMap::new(),
         };
 
         assert_eq!(mesh.typ, ChunkType::Mesh);
@@ -104,6 +182,14 @@ impl FullMesh {
             full_mesh.name = mesh_name.0.clone();
             full_mesh.prim_groups.reserve(data.num_prim_groups as usize);
         }
+
+        let shader_result: Result<Vec<_>, _> = file
+            .iter()
+            .filter(|f| f.typ == ChunkType::Shader)
+            .map(|c| Shader::parse(c, file))
+            .collect();
+
+        let shaders = shader_result?;
 
         let mut offset_vertex = 0;
         let mut offset_normal = 0;
@@ -116,6 +202,26 @@ impl FullMesh {
                     eprintln!("Skipping prim group due to invalid data");
                     continue;
                 };
+
+            full_mesh
+                .shaders
+                .entry(shader_name.clone())
+                .or_insert_with(|| {
+                    if let Some(shader) = shaders.iter().find_map(|s| {
+                        if s.name == shader_name {
+                            Some(s.clone())
+                        } else {
+                            None
+                        }
+                    }) {
+                        shader
+                    } else {
+                        panic!(
+                            "Non-existent shader {} referenced by prim group",
+                            shader_name
+                        );
+                    }
+                });
 
             let mut pgroup = PrimGroup {
                 shader_name,
@@ -208,6 +314,11 @@ impl FullMesh {
         writeln!(stream, "g {}", self.name)?;
         for group in &self.prim_groups {
             group.write_faces(&mut stream)?;
+        }
+
+        let mut mtl = BufWriter::new(File::create(path.with_extension("mtl"))?);
+        for shader in self.shaders.values() {
+            shader.write_mtl(&mut mtl)?;
         }
 
         Ok(())

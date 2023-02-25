@@ -1,7 +1,7 @@
 use crate::{
     bytes_ext::BufResult,
     chunk::{
-        data::{helpers, parse_trait::Parse},
+        data::{helpers, kinds::mesh::VertexType, parse_trait::Parse},
         type_identifiers::ChunkType,
     },
     Result,
@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 pub struct Shader {
     pub pddi_shader_name: String,
     pub has_translucency: u32,
-    pub vertex_needs: u32,
-    pub vertex_mask: u32,
+    pub vertex_needs: VertexType,
+    pub vertex_mask: VertexType,
     pub num_params: u32,
 }
 
@@ -23,8 +23,8 @@ impl Parse for Shader {
         Ok(Shader {
             pddi_shader_name: helpers::pure3d_read_string(bytes)?,
             has_translucency: bytes.safe_get_u32_le()?,
-            vertex_needs: bytes.safe_get_u32_le()?,
-            vertex_mask: bytes.safe_get_u32_le()?,
+            vertex_needs: bytes.safe_get_u32_le()?.try_into()?,
+            vertex_mask: bytes.safe_get_u32_le()?.try_into()?,
             num_params: bytes.safe_get_u32_le()?,
         })
     }
