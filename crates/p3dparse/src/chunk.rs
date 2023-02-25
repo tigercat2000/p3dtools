@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Deserialize, Serialize)]
 /// Display format is Absolute Index:Relative Index
 pub struct Span {
-    absolute_index: usize,
-    relative_index: usize,
+    pub absolute_index: usize,
+    pub relative_index: usize,
 }
 
 impl Display for Span {
@@ -33,8 +33,8 @@ pub struct Chunk {
     pub typ: ChunkType,
     pub data: ChunkData,
     pub span: Span,
-    parent: Option<usize>,
-    children: Vec<usize>,
+    pub parent: Option<usize>,
+    pub children: Vec<usize>,
 }
 
 impl Chunk {

@@ -11,7 +11,7 @@ pub type Vector3 = (f32, f32, f32);
 pub type Colour = (u8, u8, u8, u8);
 pub type Quaternion = (f32, f32, f32, f32);
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Matrix {
     pub M11: f32,
@@ -30,6 +30,29 @@ pub struct Matrix {
     pub M42: f32,
     pub M43: f32,
     pub M44: f32,
+}
+
+impl Matrix {
+    pub fn identity() -> Self {
+        Matrix {
+            M11: 1.,
+            M12: 0.,
+            M13: 0.,
+            M14: 0.,
+            M21: 0.,
+            M22: 1.,
+            M23: 0.,
+            M24: 0.,
+            M31: 0.,
+            M32: 0.,
+            M33: 1.,
+            M34: 0.,
+            M41: 0.,
+            M42: 0.,
+            M43: 0.,
+            M44: 1.,
+        }
+    }
 }
 
 impl Parse for Matrix {
