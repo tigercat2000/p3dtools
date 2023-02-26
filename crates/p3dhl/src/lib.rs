@@ -4,8 +4,8 @@ use p3dparse::chunk::{
         kinds::{
             self,
             mesh::{OldPrimGroup, PrimitiveType},
-            shader_param::ShaderParam,
-            shared::{Matrix, Vector2, Vector3},
+            shader_param::{ShaderParam, ShaderParamValue},
+            shared::{Matrix, Vector2, Vector3}, image::{ImageFormat},
         },
         ChunkData,
     },
@@ -64,7 +64,7 @@ impl<'a> FromChunk<'a> for Shader<'a> {
 /// Used for both [`Mesh`] and [`Skin`]
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct PrimGroup<'a> {
-    pub shader: Option<Shader<'a>>,
+    pub shader: &'a str,
     pub primitive_type: PrimitiveType,
     pub vertices: Option<&'a Vec<Vector3>>,
     pub normals: Option<&'a Vec<Vector3>>,
@@ -80,7 +80,7 @@ pub struct PrimGroup<'a> {
 impl<'a> PrimGroup<'a> {
     fn from_data(chunk: &'a Chunk, data: &'a OldPrimGroup, tree: &'a [Chunk]) -> Result<Self> {
         let mut group = PrimGroup {
-            shader: None,
+            shader: &data.shader_name,
             primitive_type: data.primitive_type,
             vertices: None,
             normals: None,
@@ -126,15 +126,6 @@ impl<'a> PrimGroup<'a> {
             }
         }
 
-        if let Some(shader) = tree.iter().find(|c| match (&c.typ, &c.data) {
-            (ChunkType::Shader, ChunkData::Shader(_, _, shader)) => {
-                shader.pddi_shader_name == data.shader_name
-            }
-            _ => false,
-        }) {
-            group.shader = Some(Shader::from_chunk(shader, tree)?);
-        }
-
         Ok(group)
     }
 }
@@ -160,6 +151,8 @@ impl<'a> FromChunk<'a> for PrimGroup<'a> {
 pub struct Mesh<'a> {
     pub name: &'a str,
     pub prim_groups: Vec<PrimGroup<'a>>,
+    pub shaders: Vec<Shader<'a>>,
+    pub textures: Vec<(&'a str, ImageFormat, &'a [u8])>,
 }
 
 impl<'a> Mesh<'a> {
@@ -169,13 +162,63 @@ impl<'a> Mesh<'a> {
         num_prim_groups: u32,
         tree: &'a [Chunk],
     ) -> Result<Self> {
-        let mut prim_groups = Vec::with_capacity(num_prim_groups as usize);
+        let mut mesh = Mesh {
+            name,
+            prim_groups: Vec::with_capacity(num_prim_groups as usize),
+            shaders: Vec::new(),
+            textures: Vec::new(),
+        };
 
         for child in chunk.get_children_of_type(tree, ChunkType::OldPrimGroup) {
-            prim_groups.push(PrimGroup::from_chunk(child, tree)?);
+            let group = PrimGroup::from_chunk(child, tree)?;
+
+            if let Some(shader) = tree.iter().find(|c| match (&c.typ, &c.data) {
+                (ChunkType::Shader, ChunkData::Shader(name, _, _)) => {
+                    name.0 == group.shader
+                }
+                _ => false,
+            }) {
+                mesh.shaders.push(Shader::from_chunk(shader, tree)?);
+            }
+
+            mesh.prim_groups.push(group);
         }
 
-        Ok(Mesh { name, prim_groups })
+        mesh.textures = tree
+            .iter()
+            .filter(|f| f.typ == ChunkType::Texture)
+            // Filter for valid data & in active shader list
+            .filter_map(|f| {
+                if let ChunkData::Texture(name, _, _) = &f.data {
+                    // Make sure
+                    if mesh.shaders.iter().any(|f| {
+                        f.params.iter().any(|p| {
+                            p.param == "TEX" && p.value == ShaderParamValue::Texture(name.0.clone())
+                        })
+                    }) {
+                        Some((&name.0 as &str, f))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .filter_map(|(name, f)| {
+                if let Ok(image_chunk) = f.get_child(tree, 0) {
+                    if let ChunkData::Image(_, _, data) = &image_chunk.data {
+                        if let Ok(image_raw) = image_chunk.get_child(tree, 0) {
+                            if let ChunkData::ImageRaw(raw) = &image_raw.data {
+                                return Some((name, data.image_format, &raw.data as &[u8]));
+                            }
+                        }
+                    }
+                }
+                None
+            })
+            .collect();
+
+        Ok(mesh)
     }
 }
 
@@ -282,6 +325,8 @@ pub struct Skin<'a> {
     pub name: &'a str,
     pub skeleton: Option<Skeleton<'a>>,
     pub prim_groups: Vec<PrimGroup<'a>>,
+    pub shaders: Vec<Shader<'a>>,
+    pub textures: Vec<(&'a str, ImageFormat, &'a [u8])>,
 }
 
 impl<'a> FromChunk<'a> for Skin<'a> {
@@ -293,7 +338,9 @@ impl<'a> FromChunk<'a> for Skin<'a> {
                 let mut skin = Skin {
                     name: &name.0,
                     skeleton: None,
-                    prim_groups: Vec::with_capacity(data.num_prim_groups as usize)
+                    prim_groups: Vec::with_capacity(data.num_prim_groups as usize),
+                    shaders: Vec::new(),
+                    textures: Vec::new()
                 };
 
                 if let Some(skeleton) = tree.iter().find(|c| {
@@ -308,8 +355,53 @@ impl<'a> FromChunk<'a> for Skin<'a> {
                 }
 
                 for child in chunk.get_children_of_type(tree, ChunkType::OldPrimGroup) {
-                    skin.prim_groups.push(PrimGroup::from_chunk(child, tree)?);
+                    let group = PrimGroup::from_chunk(child, tree)?;
+
+                    if let Some(shader) = tree.iter().find(|c| match (&c.typ, &c.data) {
+                        (ChunkType::Shader, ChunkData::Shader(name, _, _)) => {
+                            name.0 == group.shader
+                        }
+                        _ => false,
+                    }) {
+                        skin.shaders.push(Shader::from_chunk(shader, tree)?);
+                    }
+        
+                    skin.prim_groups.push(group);
                 }
+
+                skin.textures = tree
+                    .iter()
+                    .filter(|f| f.typ == ChunkType::Texture)
+                    // Filter for valid data & in active shader list
+                    .filter_map(|f| {
+                        if let ChunkData::Texture(name, _, _) = &f.data {
+                            // Make sure
+                            if skin.shaders.iter().any(|f| {
+                                f.params.iter().any(|p| {
+                                    p.param == "TEX" && p.value == ShaderParamValue::Texture(name.0.clone())
+                                })
+                            }) {
+                                Some((&name.0 as &str, f))
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .filter_map(|(name, f)| {
+                        if let Ok(image_chunk) = f.get_child(tree, 0) {
+                            if let ChunkData::Image(_, _, data) = &image_chunk.data {
+                                if let Ok(image_raw) = image_chunk.get_child(tree, 0) {
+                                    if let ChunkData::ImageRaw(raw) = &image_raw.data {
+                                        return Some((name, data.image_format, &raw.data as &[u8]));
+                                    }
+                                }
+                            }
+                        }
+                        None
+                    })
+                    .collect();
 
                 Ok(skin)
             }
@@ -323,6 +415,7 @@ impl<'a> FromChunk<'a> for Skin<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[non_exhaustive]
 pub enum HighLevelType<'a> {
     Mesh(Mesh<'a>),
     Skin(Skin<'a>),
@@ -448,11 +541,13 @@ mod test {
             *first,
             HighLevelType::Mesh(Mesh {
                 name: "testMesh1",
+                shaders: vec![Shader {
+                    name: "shader1",
+                    params: vec![]
+                }],
+                textures: vec![],
                 prim_groups: vec![PrimGroup {
-                    shader: Some(Shader {
-                        name: "shader1",
-                        params: vec![]
-                    }),
+                    shader: "shader1",
                     primitive_type: PrimitiveType::TriangleList,
                     vertices: Some(&vec![(0., 0., 0.)]),
                     normals: None,
@@ -605,6 +700,11 @@ mod test {
             *first,
             HighLevelType::Skin(Skin {
                 name: "testMesh1",
+                shaders: vec![Shader {
+                    name: "shader1",
+                    params: vec![]
+                }],
+                textures: vec![],
                 skeleton: Some(Skeleton {
                     name: "skeleton1",
                     joints: vec![SkeletonJoint {
@@ -619,10 +719,7 @@ mod test {
                     }]
                 }),
                 prim_groups: vec![PrimGroup {
-                    shader: Some(Shader {
-                        name: "shader1",
-                        params: vec![]
-                    }),
+                    shader: "shader1",
                     primitive_type: PrimitiveType::TriangleList,
                     vertices: Some(&vec![(0., 0., 0.)]),
                     normals: None,

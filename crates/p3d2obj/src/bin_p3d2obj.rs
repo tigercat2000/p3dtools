@@ -1,7 +1,7 @@
 #![feature(file_create_new)]
 use clap::{arg, command, value_parser};
-use p3dobj::FullMesh;
-use p3dparse::{chunk::type_identifiers::ChunkType, Bytes};
+use p3d2obj::export_all_to_obj;
+use p3dparse::Bytes;
 use std::{fs::File, io::Read, path::PathBuf};
 
 fn main() {
@@ -30,11 +30,7 @@ fn main() {
             input.read_to_end(&mut input_bytes).unwrap();
             let p3d_file = p3dparse::parse_file(Bytes::from(input_bytes)).unwrap();
 
-            for mesh in p3d_file.iter().filter(|c| c.typ == ChunkType::Mesh) {
-                let mesh = FullMesh::parse(mesh, &p3d_file).unwrap();
-                mesh.write_obj(&dest.join(mesh.name.clone()).with_extension("obj"))
-                    .unwrap();
-            }
+            export_all_to_obj(&p3d_file, dest).expect("Failed to export obj");
         }
         _ => unreachable!(),
     }

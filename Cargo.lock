@@ -261,19 +261,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b7820b9daea5457c9f21c69448905d723fbd21136ccf521748f23fd49e723ee"
 
 [[package]]
-name = "p3dhl"
+name = "p3d2obj"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "eyre",
  "itertools 0.10.5",
+ "p3dhl",
  "p3dparse",
 ]
 
 [[package]]
-name = "p3dobj"
+name = "p3dhl"
 version = "0.1.0"
 dependencies = [
- "clap",
+ "eyre",
  "itertools 0.10.5",
  "p3dparse",
 ]

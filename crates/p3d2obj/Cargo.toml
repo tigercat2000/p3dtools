@@ -1,14 +1,16 @@
 [package]
-name = "p3dobj"
+name = "p3d2obj"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+eyre = "0.6.8"
 clap = { version = "4.1.6", features = ["cargo"] }
 itertools = "0.10.5"
 p3dparse = { path = "../p3dparse" }
+p3dhl = { path = "../p3dhl" }
 
 [[bin]]
 name = "p3d2obj"
