@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use p3dhl::{HighLevelType, Mesh};
+use p3dhl::{HighLevelType, Mesh, Skin};
 use p3dparse::chunk::{
     data::kinds::{image::ImageFormat, mesh::PrimitiveType, shader_param::ShaderParamValue},
     Chunk,
@@ -109,9 +109,39 @@ impl<'a> WriteObj for p3dhl::PrimGroup<'a> {
                     }
                 }
             }
-            PrimitiveType::TriangleStrip => unimplemented!(),
-            PrimitiveType::LineList => unimplemented!(),
-            PrimitiveType::LineStrip => unimplemented!(),
+            PrimitiveType::TriangleStrip => {
+                if let Some(indices) = self.indices {
+                    for (index, (one, two, three)) in indices.iter().tuple_windows().enumerate() {
+                        // Obj format starts numbering at 1, so always offset by 1
+                        // Every other triangle has inverted normal
+                        let (one, two, three) = if index % 2 == 0 {
+                            (*three as usize + 1, *two as usize + 1, *one as usize + 1)
+                        } else {
+                            (*one as usize + 1, *two as usize + 1, *three as usize + 1)
+                        };
+                        // Write the triangle backwards for correct face normal
+                        writeln!(
+                            writer,
+                            "f {}/{}/{} {}/{}/{} {}/{}/{}",
+                            three + offset_vertex,
+                            three + offset_uv,
+                            three + offset_normal,
+                            two + offset_vertex,
+                            two + offset_uv,
+                            two + offset_normal,
+                            one + offset_vertex,
+                            one + offset_uv,
+                            one + offset_normal,
+                        )?;
+                    }
+                }
+            }
+            PrimitiveType::LineList => {
+                return Err(eyre::eyre!("LineList support is not implemented yet."))
+            }
+            PrimitiveType::LineStrip => {
+                return Err(eyre::eyre!("LineStrip support is not implemented yet."))
+            }
         }
 
         Ok(())
@@ -260,12 +290,94 @@ impl<'a> WriteObj for Mesh<'a> {
     }
 }
 
+impl<'a> WriteObj for Skin<'a> {
+    fn write_obj(&self, dest: &Path) -> Result<()> {
+        let mut stream = BufWriter::new(File::create(dest)?);
+
+        writeln!(stream, "s 1")?;
+
+        let mut offset_vertex = 0;
+        let mut offset_uv = 0;
+        let mut offset_normal = 0;
+
+        let groups: Vec<_> = self
+            .prim_groups
+            .iter()
+            .map(|prim_group| {
+                let ret = PrimGroup {
+                    prim_group,
+                    offset_vertex,
+                    offset_uv,
+                    offset_normal,
+                };
+
+                if let Some(x) = prim_group.vertices {
+                    offset_vertex += x.len()
+                }
+                if let Some(x) = prim_group.uv_map {
+                    offset_uv += x.len()
+                }
+                if let Some(x) = prim_group.normals {
+                    offset_normal += x.len()
+                }
+
+                ret
+            })
+            .collect();
+
+        for group in &groups {
+            group.prim_group.write_vertices(&mut stream)?;
+        }
+
+        for group in &groups {
+            group.prim_group.write_normals(&mut stream)?;
+        }
+
+        for group in &groups {
+            group.prim_group.write_uv_map(&mut stream)?;
+        }
+
+        writeln!(stream, "g {}", self.name)?;
+
+        for group in &groups {
+            group.prim_group.write_faces(
+                &mut stream,
+                group.offset_vertex,
+                group.offset_uv,
+                group.offset_normal,
+            )?;
+        }
+
+        let mut mtl = BufWriter::new(File::create(dest.with_extension("mtl"))?);
+        for shader in &self.shaders {
+            shader.write_mtl(&mut mtl, &self.textures)?;
+        }
+
+        for (name, format, image) in &self.textures {
+            let mut pic_writer = BufWriter::new(File::create(dest.with_file_name(
+                // Format here instead of with_extension is deliberate because we want to create files like "santa2.bmp.png" which path will try and "fix"
+                format!("{}.{}", name, format.get_extension()),
+            ))?);
+            pic_writer.write_all(image)?;
+        }
+
+        Ok(())
+    }
+}
+
 pub fn export_all_to_obj(tree: &[Chunk], dest: &Path) -> Result<()> {
     let high_level_types = p3dhl::parse_high_level_types(tree)?;
 
     for typ in high_level_types {
-        if let HighLevelType::Mesh(mesh) = typ {
-            mesh.write_obj(&dest.join(mesh.name).with_extension("obj"))?;
+        match typ {
+            HighLevelType::Mesh(mesh) => {
+                mesh.write_obj(&dest.join(mesh.name).with_extension("obj"))?
+            }
+            HighLevelType::Skin(skin) => {
+                eprintln!("Warning: OBJ Format does not support skeletons or weight paint, skins will be exported as plain meshes.");
+                skin.write_obj(&dest.join(skin.name).with_extension("obj"))?;
+            }
+            _ => {}
         }
     }
 
