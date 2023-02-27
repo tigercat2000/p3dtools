@@ -4,6 +4,7 @@ use gltf_json::{image::MimeType, validation::Validate};
 use p3dparse::chunk::{
     data::kinds::{
         image::ImageFormat,
+        mesh,
         shared::{Colour, Vector2, Vector3},
     },
     Chunk,
@@ -308,15 +309,19 @@ fn export_shader_to_gltf(
 ) -> Result<gltf_json::Material> {
     Ok(gltf_json::Material {
         alpha_cutoff: None,
-        alpha_mode: wrap_valid(gltf_json::material::AlphaMode::Blend),
+        alpha_mode: wrap_valid(gltf_json::material::AlphaMode::Opaque),
         double_sided: shader.two_sided.unwrap_or(false),
         pbr_metallic_roughness: gltf_json::material::PbrMetallicRoughness {
-            base_color_factor: gltf_json::material::PbrBaseColorFactor(
-                shader
-                    .specular
-                    .map(normalize_colour_to_f32)
-                    .unwrap_or([1., 1., 1., 1.]),
-            ),
+            base_color_factor: if shader.texture.is_none() {
+                gltf_json::material::PbrBaseColorFactor(
+                    shader
+                        .specular
+                        .map(normalize_colour_to_f32)
+                        .unwrap_or([1., 1., 1., 1.]),
+                )
+            } else {
+                gltf_json::material::PbrBaseColorFactor([1., 1., 1., 1.])
+            },
             base_color_texture: if let Some(texture) = shader.texture {
                 texture_to_index_map
                     .get(texture)
@@ -330,8 +335,8 @@ fn export_shader_to_gltf(
             } else {
                 None
             },
-            metallic_factor: gltf_json::material::StrengthFactor(0.5),
-            roughness_factor: gltf_json::material::StrengthFactor(0.1),
+            metallic_factor: gltf_json::material::StrengthFactor(0.),
+            roughness_factor: gltf_json::material::StrengthFactor(1.0),
             metallic_roughness_texture: None,
             extensions: None,
             extras: Default::default(),
@@ -361,7 +366,12 @@ fn export_prim_group_to_gltf(
         extras: Default::default(),
         indices: None,
         material: shader_to_index_map.get(group.shader).copied(),
-        mode: wrap_valid(gltf_json::mesh::Mode::Triangles),
+        mode: wrap_valid(match group.primitive_type {
+            mesh::PrimitiveType::TriangleList => gltf_json::mesh::Mode::Triangles,
+            mesh::PrimitiveType::TriangleStrip => gltf_json::mesh::Mode::TriangleStrip,
+            mesh::PrimitiveType::LineList => gltf_json::mesh::Mode::Lines,
+            mesh::PrimitiveType::LineStrip => gltf_json::mesh::Mode::LineStrip,
+        }),
         targets: None,
     };
 
@@ -380,9 +390,10 @@ fn export_prim_group_to_gltf(
     }
 
     if let Some(uv_map) = group.uv_map {
+        let remap: Vec<(f32, f32)> = uv_map.iter().copied().map(|(x, y)| (x, -y)).collect();
         primitive.attributes.insert(
             wrap_valid(gltf_json::mesh::Semantic::TexCoords(0)),
-            buffer.insert_vec2(uv_map),
+            buffer.insert_vec2(&remap),
         );
     }
 
