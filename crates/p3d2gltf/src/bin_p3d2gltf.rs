@@ -1,4 +1,3 @@
-#![feature(file_create_new)]
 use clap::{arg, command, value_parser};
 use p3d2gltf::export_all_to_gltf;
 use p3dparse::Bytes;

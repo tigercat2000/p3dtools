@@ -3,9 +3,10 @@ use p3dparse::chunk::{
     data::{
         kinds::{
             self,
+            image::ImageFormat,
             mesh::{OldPrimGroup, PrimitiveType},
             shader_param::{ShaderParam, ShaderParamValue},
-            shared::{Matrix, Vector2, Vector3}, image::{ImageFormat},
+            shared::{Colour, Matrix, Vector2, Vector3},
         },
         ChunkData,
     },
@@ -25,6 +26,12 @@ pub trait FromChunk<'a> {
 pub struct Shader<'a> {
     pub name: &'a str,
     pub params: Vec<&'a ShaderParam>,
+
+    pub texture: Option<&'a str>,
+    pub lit: Option<bool>,
+    pub two_sided: Option<bool>,
+    pub specular: Option<&'a Colour>,
+    pub emissive: Option<&'a Colour>,
 }
 
 impl<'a> Shader<'a> {
@@ -32,10 +39,26 @@ impl<'a> Shader<'a> {
         let mut shader = Shader {
             name,
             params: Vec::with_capacity(params as usize),
+
+            texture: None,
+            lit: None,
+            two_sided: None,
+            specular: None,
+            emissive: None,
         };
 
         for child in chunk.get_children(tree) {
             if let ChunkData::ShaderParam(param) = &child.data {
+                match (param.param.as_str(), &param.value) {
+                    ("TEX", ShaderParamValue::Texture(texture)) => {
+                        shader.texture = Some(texture.as_str())
+                    }
+                    ("LIT", ShaderParamValue::Int(int)) => shader.lit = Some(*int > 0),
+                    ("2SID", ShaderParamValue::Int(int)) => shader.two_sided = Some(*int > 0),
+                    ("SPEC", ShaderParamValue::Colour(color)) => shader.specular = Some(color),
+                    ("EMIS", ShaderParamValue::Colour(color)) => shader.emissive = Some(color),
+                    _ => {}
+                }
                 shader.params.push(param)
             }
         }
@@ -173,9 +196,7 @@ impl<'a> Mesh<'a> {
             let group = PrimGroup::from_chunk(child, tree)?;
 
             if let Some(shader) = tree.iter().find(|c| match (&c.typ, &c.data) {
-                (ChunkType::Shader, ChunkData::Shader(name, _, _)) => {
-                    name.0 == group.shader
-                }
+                (ChunkType::Shader, ChunkData::Shader(name, _, _)) => name.0 == group.shader,
                 _ => false,
             }) {
                 mesh.shaders.push(Shader::from_chunk(shader, tree)?);
@@ -365,7 +386,7 @@ impl<'a> FromChunk<'a> for Skin<'a> {
                     }) {
                         skin.shaders.push(Shader::from_chunk(shader, tree)?);
                     }
-        
+
                     skin.prim_groups.push(group);
                 }
 
@@ -543,7 +564,12 @@ mod test {
                 name: "testMesh1",
                 shaders: vec![Shader {
                     name: "shader1",
-                    params: vec![]
+                    params: vec![],
+                    texture: None,
+                    lit: None,
+                    two_sided: None,
+                    specular: None,
+                    emissive: None
                 }],
                 textures: vec![],
                 prim_groups: vec![PrimGroup {
@@ -702,7 +728,12 @@ mod test {
                 name: "testMesh1",
                 shaders: vec![Shader {
                     name: "shader1",
-                    params: vec![]
+                    params: vec![],
+                    texture: None,
+                    lit: None,
+                    two_sided: None,
+                    specular: None,
+                    emissive: None
                 }],
                 textures: vec![],
                 skeleton: Some(Skeleton {

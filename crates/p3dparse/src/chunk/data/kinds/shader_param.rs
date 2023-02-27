@@ -1,7 +1,7 @@
 use crate::{
     bytes_ext::BufResult,
     chunk::{
-        data::{helpers, parse_trait::Parse},
+        data::{helpers, kinds::shared::Colour, parse_trait::Parse},
         type_identifiers::ChunkType,
     },
     Result,
@@ -42,6 +42,6 @@ pub enum ShaderParamValue {
     Texture(String),
     Int(u32),
     Float(f32),
-    Colour((u8, u8, u8, u8)),
+    Colour(Colour),
     None,
 }

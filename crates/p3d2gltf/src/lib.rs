@@ -1,8 +1,11 @@
 use base64::Engine;
 use eyre::eyre;
-use gltf_json::validation::Validate;
+use gltf_json::{image::MimeType, validation::Validate};
 use p3dparse::chunk::{
-    data::kinds::shared::{Vector2, Vector3},
+    data::kinds::{
+        image::ImageFormat,
+        shared::{Colour, Vector2, Vector3},
+    },
     Chunk,
 };
 use serde_json::json;
@@ -28,6 +31,7 @@ struct glTFBufferBuilder {
     buffer: Vec<u8>,
     buffer_views: Vec<gltf_json::buffer::View>,
     accessors: Vec<gltf_json::accessor::Accessor>,
+    images: Vec<gltf_json::Image>,
 }
 
 impl glTFBufferBuilder {
@@ -43,6 +47,7 @@ impl glTFBufferBuilder {
     ) -> (
         Vec<gltf_json::Accessor>,
         Vec<gltf_json::buffer::View>,
+        Vec<gltf_json::Image>,
         gltf_json::Buffer,
     ) {
         let mut uri = "data:application/octet-stream;base64,".into();
@@ -52,11 +57,12 @@ impl glTFBufferBuilder {
         (
             self.accessors,
             self.buffer_views,
+            self.images,
             gltf_json::Buffer {
                 byte_length,
                 uri: Some(uri),
                 extensions: None,
-                extras: gltf_json::Extras::default(),
+                extras: Default::default(),
             },
         )
     }
@@ -65,43 +71,31 @@ impl glTFBufferBuilder {
 impl glTFBufferBuilder {
     fn get_min_components_vec3(vec: &[Vector3]) -> Option<gltf_json::Value> {
         vec.iter()
-            .cloned()
+            .copied()
             .reduce(|acc, chunk| (acc.0.min(chunk.0), acc.1.min(chunk.1), acc.2.min(chunk.2)))
             .map(|f| json!(f))
     }
 
     fn get_max_components_vec3(vec: &[Vector3]) -> Option<gltf_json::Value> {
         vec.iter()
-            .cloned()
+            .copied()
             .reduce(|acc, chunk| (acc.0.max(chunk.0), acc.1.max(chunk.1), acc.2.max(chunk.2)))
             .map(|f| json!(f))
     }
 
     fn get_min_components_vec2(vec: &[Vector2]) -> Option<gltf_json::Value> {
         vec.iter()
-            .cloned()
+            .copied()
             .reduce(|acc, chunk| (acc.0.min(chunk.0), acc.1.min(chunk.1)))
             .map(|f| json!(f))
     }
 
     fn get_max_components_vec2(vec: &[Vector2]) -> Option<gltf_json::Value> {
         vec.iter()
-            .cloned()
+            .copied()
             .reduce(|acc, chunk| (acc.0.max(chunk.0), acc.1.max(chunk.1)))
             .map(|f| json!(f))
     }
-
-    // fn get_min_components_scalar(vec: &[u32]) -> Option<gltf_json::Value> {
-    //     vec.iter()
-    //         .reduce(|acc, chunk| acc.min(chunk))
-    //         .map(|f| json!(f))
-    // }
-
-    // fn get_max_components_scalar(vec: &[u32]) -> Option<gltf_json::Value> {
-    //     vec.iter()
-    //         .reduce(|acc, chunk| acc.max(chunk))
-    //         .map(|f| json!(f))
-    // }
 
     fn create_buffer_view(
         &mut self,
@@ -198,6 +192,22 @@ impl glTFBufferBuilder {
         )
     }
 
+    fn create_image(
+        &mut self,
+        buffer_view: gltf_json::Index<gltf_json::buffer::View>,
+        mime_type: MimeType,
+    ) -> gltf_json::Index<gltf_json::Image> {
+        self.images.push(gltf_json::Image {
+            buffer_view: Some(buffer_view),
+            mime_type: Some(mime_type),
+            uri: None,
+            extensions: None,
+            extras: Default::default(),
+        });
+
+        gltf_json::Index::new((self.images.len() - 1) as u32)
+    }
+
     pub fn insert_vec3(&mut self, vec: &[Vector3]) -> gltf_json::Index<gltf_json::Accessor> {
         let before_len = self.buffer.len();
         self.buffer.extend(
@@ -238,18 +248,119 @@ impl glTFBufferBuilder {
 
         self.create_accessor_scalar(Some(buffer_view), vec)
     }
+
+    pub fn insert_image(
+        &mut self,
+        (format, image): (&ImageFormat, &[u8]),
+    ) -> Result<gltf_json::Index<gltf_json::Image>> {
+        let mime_type = match format {
+            ImageFormat::PNG => gltf_json::image::MimeType("image/png".into()),
+            ImageFormat::TGA => gltf_json::image::MimeType("image/tga".into()),
+            ImageFormat::BMP => gltf_json::image::MimeType("image/bmp".into()),
+            other => return Err(eyre!("glTF does not support image format {:?}", other)),
+        };
+
+        let before_len = self.buffer.len();
+        self.buffer.extend(image.iter());
+        let after_len = self.buffer.len();
+
+        let buffer_view =
+            self.create_buffer_view((after_len - before_len) as u32, before_len as u32);
+
+        Ok(self.create_image(buffer_view, mime_type))
+    }
+}
+
+fn normalize_colour_to_f32(colour: &Colour) -> [f32; 4] {
+    [
+        (colour.0 as f32) / 255.0,
+        (colour.1 as f32) / 255.0,
+        (colour.2 as f32) / 255.0,
+        (colour.3 as f32) / 255.0,
+    ]
+}
+
+/// Truncates the alpha field
+fn normalize_emissive_to_f32(colour: &Colour) -> [f32; 3] {
+    [
+        (colour.0 as f32) / 255.0,
+        (colour.1 as f32) / 255.0,
+        (colour.2 as f32) / 255.0,
+    ]
+}
+
+fn export_texture_to_gltf(
+    texture: (&ImageFormat, &[u8]),
+    buffer: &mut glTFBufferBuilder,
+) -> Result<gltf_json::Texture> {
+    Ok(gltf_json::Texture {
+        // TODO: Change this if textures turn out badly
+        sampler: None,
+        source: buffer.insert_image(texture)?,
+        extensions: None,
+        extras: Default::default(),
+    })
+}
+
+fn export_shader_to_gltf(
+    shader: &p3dhl::Shader,
+    texture_to_index_map: &HashMap<&str, gltf_json::Index<gltf_json::Texture>>,
+) -> Result<gltf_json::Material> {
+    Ok(gltf_json::Material {
+        alpha_cutoff: None,
+        alpha_mode: wrap_valid(gltf_json::material::AlphaMode::Blend),
+        double_sided: shader.two_sided.unwrap_or(false),
+        pbr_metallic_roughness: gltf_json::material::PbrMetallicRoughness {
+            base_color_factor: gltf_json::material::PbrBaseColorFactor(
+                shader
+                    .specular
+                    .map(normalize_colour_to_f32)
+                    .unwrap_or([1., 1., 1., 1.]),
+            ),
+            base_color_texture: if let Some(texture) = shader.texture {
+                texture_to_index_map
+                    .get(texture)
+                    .copied()
+                    .map(|index| gltf_json::texture::Info {
+                        index,
+                        tex_coord: Default::default(),
+                        extensions: None,
+                        extras: Default::default(),
+                    })
+            } else {
+                None
+            },
+            metallic_factor: gltf_json::material::StrengthFactor(0.5),
+            roughness_factor: gltf_json::material::StrengthFactor(0.1),
+            metallic_roughness_texture: None,
+            extensions: None,
+            extras: Default::default(),
+        },
+        normal_texture: None,
+        occlusion_texture: None,
+        emissive_texture: None,
+        emissive_factor: gltf_json::material::EmissiveFactor(
+            shader
+                .emissive
+                .map(normalize_emissive_to_f32)
+                .unwrap_or([0., 0., 0.]),
+        ),
+        extensions: None,
+        extras: Default::default(),
+    })
 }
 
 fn export_prim_group_to_gltf(
     group: p3dhl::PrimGroup,
+    shader_to_index_map: &HashMap<&str, gltf_json::Index<gltf_json::Material>>,
     buffer: &mut glTFBufferBuilder,
 ) -> Result<gltf_json::mesh::Primitive> {
     let mut primitive = gltf_json::mesh::Primitive {
         attributes: HashMap::new(),
         extensions: None,
-        extras: gltf_json::Extras::default(),
+        extras: Default::default(),
         indices: None,
-        material: None,
+        material: shader_to_index_map.get(group.shader).copied(),
         mode: wrap_valid(gltf_json::mesh::Mode::Triangles),
         targets: None,
     };
@@ -286,26 +397,44 @@ fn export_prim_group_to_gltf(
 fn export_mesh_to_gltf(mesh: p3dhl::Mesh, dest: &Path) -> Result<()> {
     let mut buffer = glTFBufferBuilder::new(0);
 
+    let mut texture_to_index_map = HashMap::new();
+    for (index, (name, _, _)) in mesh.textures.iter().enumerate() {
+        texture_to_index_map.insert(*name, gltf_json::Index::new(index as u32));
+    }
+
+    let mut shader_to_index_map = HashMap::new();
+    let mut materials = Vec::with_capacity(mesh.shaders.len());
+    for (index, shader) in mesh.shaders.iter().enumerate() {
+        shader_to_index_map.insert(shader.name, gltf_json::Index::new(index as u32));
+        materials.push(export_shader_to_gltf(shader, &texture_to_index_map)?);
+    }
+
     let mut primitives = vec![];
     for group in mesh.prim_groups {
-        let x = export_prim_group_to_gltf(group, &mut buffer)?;
+        let x = export_prim_group_to_gltf(group, &shader_to_index_map, &mut buffer)?;
         primitives.push(x);
+    }
+
+    // We have to defer image data to the end so that we don't disrupt anything that actually needs to be aligned
+    let mut textures = Vec::with_capacity(mesh.textures.len());
+    for (_, (_, format, texture)) in mesh.textures.iter().enumerate() {
+        textures.push(export_texture_to_gltf((format, texture), &mut buffer)?);
     }
 
     let gltf_mesh = gltf_json::Mesh {
         extensions: None,
         primitives,
-        extras: gltf_json::Extras::default(),
+        extras: Default::default(),
         weights: None,
     };
 
-    let (accessors, buffer_views, buffer) = buffer.build();
+    let (accessors, buffer_views, images, buffer) = buffer.build();
 
     let node = gltf_json::Node {
         camera: None,
         children: None,
         extensions: None,
-        extras: gltf_json::Extras::default(),
+        extras: Default::default(),
         matrix: None,
         mesh: Some(gltf_json::Index::new(0)),
         rotation: None,
@@ -321,7 +450,7 @@ fn export_mesh_to_gltf(mesh: p3dhl::Mesh, dest: &Path) -> Result<()> {
         asset: gltf_json::Asset {
             copyright: None,
             extensions: None,
-            extras: gltf_json::Extras::default(),
+            extras: Default::default(),
             generator: Some(format!("Khronos glTF p3d2gltf converter v{}", VERSION)),
             min_version: None,
             version: "2.0".into(),
@@ -330,22 +459,22 @@ fn export_mesh_to_gltf(mesh: p3dhl::Mesh, dest: &Path) -> Result<()> {
         buffer_views,
         scene: Some(gltf_json::Index::new(0)),
         extensions: None,
-        extras: gltf_json::Extras::default(),
+        extras: Default::default(),
         extensions_used: Vec::new(),
         extensions_required: Vec::new(),
         cameras: Vec::new(),
-        images: Vec::new(),
-        materials: Vec::new(),
+        images,
+        materials,
         meshes: vec![gltf_mesh],
         nodes: vec![node],
         samplers: Vec::new(),
         scenes: vec![gltf_json::Scene {
             extensions: None,
-            extras: gltf_json::Extras::default(),
+            extras: Default::default(),
             nodes: vec![gltf_json::Index::new(0)],
         }],
         skins: Vec::new(),
-        textures: Vec::new(),
+        textures,
     };
 
     let mut errors = Vec::new();
