@@ -507,13 +507,115 @@ fn export_mesh_to_gltf(mesh: p3dhl::Mesh, dest: &Path) -> Result<()> {
     Ok(())
 }
 
+fn export_skin_to_gltf(skin: p3dhl::Skin, dest: &Path) -> Result<()> {
+    let mut buffer = glTFBufferBuilder::new(0);
+
+    let mut texture_to_index_map = HashMap::new();
+    for (index, (name, _, _)) in skin.textures.iter().enumerate() {
+        texture_to_index_map.insert(*name, gltf_json::Index::new(index as u32));
+    }
+
+    let mut shader_to_index_map = HashMap::new();
+    let mut materials = Vec::with_capacity(skin.shaders.len());
+    for (index, shader) in skin.shaders.iter().enumerate() {
+        shader_to_index_map.insert(shader.name, gltf_json::Index::new(index as u32));
+        materials.push(export_shader_to_gltf(shader, &texture_to_index_map)?);
+    }
+
+    let mut primitives = vec![];
+    for group in skin.prim_groups {
+        let x = export_prim_group_to_gltf(group, &shader_to_index_map, &mut buffer)?;
+        primitives.push(x);
+    }
+
+    // We have to defer image data to the end so that we don't disrupt anything that actually needs to be aligned
+    let mut textures = Vec::with_capacity(skin.textures.len());
+    for (_, (_, format, texture)) in skin.textures.iter().enumerate() {
+        textures.push(export_texture_to_gltf((format, texture), &mut buffer)?);
+    }
+
+    let gltf_mesh = gltf_json::Mesh {
+        extensions: None,
+        primitives,
+        extras: Default::default(),
+        weights: None,
+    };
+
+    let (accessors, buffer_views, images, buffer) = buffer.build();
+
+    let node = gltf_json::Node {
+        camera: None,
+        children: None,
+        extensions: None,
+        extras: Default::default(),
+        matrix: None,
+        mesh: Some(gltf_json::Index::new(0)),
+        rotation: None,
+        scale: None,
+        translation: None,
+        skin: None,
+        weights: None,
+    };
+
+    let root = gltf_json::Root {
+        accessors,
+        animations: Vec::new(),
+        asset: gltf_json::Asset {
+            copyright: None,
+            extensions: None,
+            extras: Default::default(),
+            generator: Some(format!("Khronos glTF p3d2gltf converter v{}", VERSION)),
+            min_version: None,
+            version: "2.0".into(),
+        },
+        buffers: vec![buffer],
+        buffer_views,
+        scene: Some(gltf_json::Index::new(0)),
+        extensions: None,
+        extras: Default::default(),
+        extensions_used: Vec::new(),
+        extensions_required: Vec::new(),
+        cameras: Vec::new(),
+        images,
+        materials,
+        meshes: vec![gltf_mesh],
+        nodes: vec![node],
+        samplers: Vec::new(),
+        scenes: vec![gltf_json::Scene {
+            extensions: None,
+            extras: Default::default(),
+            nodes: vec![gltf_json::Index::new(0)],
+        }],
+        skins: Vec::new(),
+        textures,
+    };
+
+    let mut errors = Vec::new();
+    root.validate(&root, gltf_json::Path::new, &mut |path, error| {
+        errors.push((path(), error))
+    });
+
+    // Make sure our mesh is valid!
+    if !errors.is_empty() {
+        return Err(eyre!("{:#?}", errors));
+    }
+
+    let serde_str = serde_json::ser::to_string_pretty(&root)?;
+
+    let mut writer = BufWriter::new(File::create(dest.join(skin.name).with_extension("gltf"))?);
+
+    write!(writer, "{}", serde_str)?;
+
+    Ok(())
+}
+
 pub fn export_all_to_gltf(tree: &[Chunk], dest: &Path) -> Result<()> {
     let hltypes = p3dhl::parse_high_level_types(tree)?;
 
     for hlt in hltypes {
         match hlt {
             p3dhl::HighLevelType::Mesh(mesh) => export_mesh_to_gltf(mesh, dest)?,
-            p3dhl::HighLevelType::Skin(_) => todo!(),
+            p3dhl::HighLevelType::Skin(skin) => export_skin_to_gltf(skin, dest)?,
             _ => todo!(),
         }
     }
