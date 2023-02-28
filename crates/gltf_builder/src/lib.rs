@@ -1,4 +1,3 @@
-use super::Result;
 use eyre::eyre;
 use gltf_json::{
     accessor::{GenericComponentType, Type},
@@ -9,6 +8,8 @@ use gltf_json::{
 };
 use serde_json::json;
 use std::{collections::HashMap, mem::size_of};
+
+pub type Result<T> = std::result::Result<T, eyre::Error>;
 
 pub type Vector2 = [f32; 2];
 pub type Vector3 = [f32; 3];
@@ -508,7 +509,7 @@ impl glTFBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::builder::glTFBuilder;
+    use crate::glTFBuilder;
     use gltf_json::{accessor::Type, image::MimeType, Buffer, Index};
     use std::mem::size_of;
 

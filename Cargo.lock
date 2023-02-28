@@ -129,6 +129,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "gltf_builder"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "clap",
+ "eyre",
+ "gltf-json",
+ "itertools 0.10.5",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -304,6 +317,7 @@ dependencies = [
  "clap",
  "eyre",
  "gltf-json",
+ "gltf_builder",
  "itertools 0.10.5",
  "p3dhl",
  "p3dparse",

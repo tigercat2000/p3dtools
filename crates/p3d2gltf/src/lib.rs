@@ -1,5 +1,3 @@
-pub mod builder;
-
 use base64::Engine;
 use eyre::eyre;
 use gltf_json::{image::MimeType, validation::Validate};

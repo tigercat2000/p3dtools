@@ -1,5 +1,5 @@
 [package]
-name = "p3d2gltf"
+name = "gltf_builder"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,14 +9,7 @@ edition = "2021"
 eyre = "0.6.8"
 clap = { version = "4.1.6", features = ["cargo"] }
 itertools = "0.10.5"
-p3dparse = { path = "../p3dparse" }
-p3dhl = { path = "../p3dhl" }
-gltf_builder = { path = "../gltf_builder" }
 gltf-json = { version = "1.1.0", features = ["names"] }
 serde = "1.0.152"
 serde_json = "1.0.93"
 base64 = "0.21.0"
-
-[[bin]]
-name = "p3d2gltf"
-path = "src/bin_p3d2gltf.rs"
