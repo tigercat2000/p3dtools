@@ -26,7 +26,14 @@ pub struct glTFBuilder {
     unencoded_buffers: HashMap<Index<Buffer>, Vec<u8>>,
 }
 
+/// Internal functions.
 impl glTFBuilder {
+    /// This will throw an [`Result::Err`] if the internal [`gltf_json`] validation of our [`Root`] fails.
+    /// Used to ensure the state is always valid after every public function call.
+    ///
+    /// During the process of the call and during internal calls, the state is allowed to be invalid, as we hold a &mut self.
+    /// This is unfortunately necessary because some operations require insertions into two different parts of the struct,
+    /// which cannot be done in parallel.
     fn check_validity(&self) -> crate::Result<()> {
         let mut errors = Vec::new();
         self.root
@@ -42,13 +49,21 @@ impl glTFBuilder {
         Ok(())
     }
 
-    fn get_buffer(&mut self, buffer: Index<Buffer>) -> (&Vec<u8>, &Buffer) {
+    /// This helper returns an immutable reference to
+    /// both the real unencoded data from [`glTFBuilder::unencoded_buffers`]
+    /// as well as the [`Buffer`] entry, so that internal functions can view the
+    /// data as if it were combined.
+    fn get_buffer(&self, buffer: Index<Buffer>) -> (&Vec<u8>, &Buffer) {
         (
             self.unencoded_buffers.get(&buffer).unwrap(),
             self.root.buffers.get(buffer.value()).unwrap(),
         )
     }
 
+    /// This helper returns a mutable reference to
+    /// both the real unencoded data from [`glTFBuilder::unencoded_buffers`]
+    /// as well as the [`Buffer`] entry, so that internal functions can mutate the
+    /// data as if it were combined.
     fn get_buffer_mut(&mut self, buffer: Index<Buffer>) -> (&mut Vec<u8>, &mut Buffer) {
         (
             self.unencoded_buffers.get_mut(&buffer).unwrap(),
@@ -56,6 +71,8 @@ impl glTFBuilder {
         )
     }
 
+    /// This creates a new [`Buffer`] backed by a [`Vec<u8>`]
+    /// in [`glTFBuilder::unencoded_buffers`].
     fn create_buffer(&mut self, name: Option<&str>) -> Index<Buffer> {
         let buffer_type = Buffer {
             byte_length: 0,
@@ -72,7 +89,10 @@ impl glTFBuilder {
         index
     }
 
-    fn insert_data(
+    /// This inserts additional data into an existing [`Buffer`] and
+    /// creates a new [`buffer::View`] to that data, then returns
+    /// an index to the newly created [`buffer::View`].
+    fn insert_raw_data(
         &mut self,
         name: Option<&str>,
         buffer: Index<Buffer>,
@@ -102,11 +122,25 @@ impl glTFBuilder {
 
         Index::new(self.root.buffer_views.push_indexed(buffer_view) as u32)
     }
+
+    /// Steps to build:
+    /// - Base64 encode [`glTFBuilder::unencoded_buffers`] and place them in their respective [`Buffer::uri`] fields.
+    /// - Return [`serde_json::to_string(root)`].
+    fn build_internal(self) -> String {
+        todo!()
+    }
 }
 
+/// Public functions.
 impl glTFBuilder {
+    /// Constructs a new gltfBuilder with a valid, default internal representation.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Finalize the [`glTFBuilder`] and return the json encoded [`Root`].
+    pub fn build(self) -> String {
+        self.build_internal()
     }
 }
 
@@ -134,7 +168,7 @@ mod tests {
 
         assert_eq!(builder.root.buffers.len(), 1);
 
-        let new_buffer = &builder.root.buffers[0];
+        let (_, new_buffer) = &builder.get_buffer(index);
 
         assert_eq!(new_buffer.byte_length, 0);
         assert_eq!(new_buffer.name, Some("Test Buffer".into()));
@@ -148,7 +182,7 @@ mod tests {
         let mut builder = glTFBuilder::new();
         let buffer_idx = helper_setup_buffer(&mut builder);
 
-        let buffer_view_idx = builder.insert_data(Some("Test Data"), buffer_idx, &[1, 2, 3]);
+        let buffer_view_idx = builder.insert_raw_data(Some("Test Data"), buffer_idx, &[1, 2, 3]);
 
         assert_eq!(buffer_view_idx.value(), 0);
         assert_eq!(builder.root.buffer_views.len(), 1);
@@ -170,9 +204,10 @@ mod tests {
     fn test_multiple_views() {
         let mut builder = glTFBuilder::new();
         let buffer_idx = helper_setup_buffer(&mut builder);
-        let buffer_view_idx_1 = builder.insert_data(Some("Test Data"), buffer_idx, &[1, 2, 3]);
+        let buffer_view_idx_1 = builder.insert_raw_data(Some("Test Data"), buffer_idx, &[1, 2, 3]);
         assert_eq!(buffer_view_idx_1.value(), 0);
-        let buffer_view_idx_2 = builder.insert_data(Some("Test Data 2"), buffer_idx, &[4, 5, 6]);
+        let buffer_view_idx_2 =
+            builder.insert_raw_data(Some("Test Data 2"), buffer_idx, &[4, 5, 6]);
         assert_eq!(buffer_view_idx_2.value(), 1);
 
         let buffer_views = &builder.root.buffer_views;
