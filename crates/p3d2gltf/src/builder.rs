@@ -72,30 +72,6 @@ impl WriteGltf for f32 {
     }
 }
 
-impl WriteGltf for Vector2 {
-    fn write_data(&self, out: &mut Vec<u8>) {
-        self.0.write_data(out);
-        self.1.write_data(out);
-    }
-}
-
-impl WriteGltf for Vector3 {
-    fn write_data(&self, out: &mut Vec<u8>) {
-        self.0.write_data(out);
-        self.1.write_data(out);
-        self.2.write_data(out);
-    }
-}
-
-impl WriteGltf for Colour {
-    fn write_data(&self, out: &mut Vec<u8>) {
-        self.0.write_data(out);
-        self.1.write_data(out);
-        self.2.write_data(out);
-        self.3.write_data(out);
-    }
-}
-
 #[derive(Debug, Default)]
 #[allow(non_camel_case_types)]
 pub struct glTFBuilder {

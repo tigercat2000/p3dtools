@@ -25,12 +25,9 @@ impl Parse for ShaderParam {
                 }
                 ChunkType::ShaderIntParam => ShaderParamValue::Int(bytes.safe_get_u32_le()?),
                 ChunkType::ShaderFloatParam => ShaderParamValue::Float(bytes.safe_get_f32_le()?),
-                ChunkType::ShaderColourParam => ShaderParamValue::Colour((
-                    bytes.safe_get_u8()?,
-                    bytes.safe_get_u8()?,
-                    bytes.safe_get_u8()?,
-                    bytes.safe_get_u8()?,
-                )),
+                ChunkType::ShaderColourParam => {
+                    ShaderParamValue::Colour(helpers::read_colour(bytes)?)
+                }
                 _ => ShaderParamValue::None,
             },
         })

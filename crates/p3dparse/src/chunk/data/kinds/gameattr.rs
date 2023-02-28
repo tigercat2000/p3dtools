@@ -41,12 +41,9 @@ impl Parse for GameAttrParam {
                 ChunkType::GameAttrFloatParam => {
                     GameAttrParamValue::Float(bytes.safe_get_f32_le()?)
                 }
-                ChunkType::GameAttrColourParam => GameAttrParamValue::Colour((
-                    bytes.safe_get_u8()?,
-                    bytes.safe_get_u8()?,
-                    bytes.safe_get_u8()?,
-                    bytes.safe_get_u8()?,
-                )),
+                ChunkType::GameAttrColourParam => {
+                    GameAttrParamValue::Colour(helpers::read_colour(bytes)?)
+                }
                 ChunkType::GameAttrVectorParam => GameAttrParamValue::Vector(read_vec3(bytes)?),
                 ChunkType::GameAttrMatrixParam => {
                     GameAttrParamValue::Matrix(Matrix::parse(bytes, typ)?)

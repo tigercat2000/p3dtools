@@ -27,42 +27,42 @@ pub fn pure3d_read_fourcc(bytes: &mut Bytes) -> Result<String> {
 }
 
 pub fn read_vec2(bytes: &mut Bytes) -> Result<Vector2> {
-    Ok((bytes.safe_get_f32_le()?, bytes.safe_get_f32_le()?))
+    Ok([bytes.safe_get_f32_le()?, bytes.safe_get_f32_le()?])
 }
 
 pub fn read_vec3(bytes: &mut Bytes) -> Result<Vector3> {
-    Ok((
+    Ok([
         bytes.safe_get_f32_le()?,
         bytes.safe_get_f32_le()?,
         bytes.safe_get_f32_le()?,
-    ))
+    ])
 }
 
 pub fn read_quaternion(bytes: &mut Bytes) -> Result<Quaternion> {
-    Ok((
+    Ok([
         bytes.safe_get_f32_le()?,
         bytes.safe_get_f32_le()?,
         bytes.safe_get_f32_le()?,
         bytes.safe_get_f32_le()?,
-    ))
+    ])
 }
 
 const QUATERNION_INVERSE_COMPRESSION_FACTOR: f32 = 1.0 / 32767.0;
 
 pub fn read_compressed_quaternion(bytes: &mut Bytes) -> Result<Quaternion> {
-    Ok((
+    Ok([
         (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
         (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
         (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
         (bytes.safe_get_u16_le()? as f32) * QUATERNION_INVERSE_COMPRESSION_FACTOR,
-    ))
+    ])
 }
 
 pub fn read_colour(bytes: &mut Bytes) -> Result<Colour> {
-    Ok((
+    Ok([
         bytes.safe_get_u8()?,
         bytes.safe_get_u8()?,
         bytes.safe_get_u8()?,
         bytes.safe_get_u8()?,
-    ))
+    ])
 }

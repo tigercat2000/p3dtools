@@ -514,7 +514,7 @@ mod test {
             Chunk {
                 typ: ChunkType::PositionList,
                 data: ChunkData::PositionList(kinds::mesh::PositionList {
-                    positions: vec![(0., 0., 0.)],
+                    positions: vec![[0., 0., 0.]],
                 }),
                 span: Span {
                     absolute_index: 3,
@@ -575,7 +575,7 @@ mod test {
                 prim_groups: vec![PrimGroup {
                     shader: "shader1",
                     primitive_type: PrimitiveType::TriangleList,
-                    vertices: Some(&vec![(0., 0., 0.)]),
+                    vertices: Some(&vec![[0., 0., 0.]]),
                     normals: None,
                     tangents: None,
                     binormals: None,
@@ -642,7 +642,7 @@ mod test {
             Chunk {
                 typ: ChunkType::PositionList,
                 data: ChunkData::PositionList(kinds::mesh::PositionList {
-                    positions: vec![(0., 0., 0.)],
+                    positions: vec![[0., 0., 0.]],
                 }),
                 span: Span {
                     absolute_index: 3,
@@ -752,7 +752,7 @@ mod test {
                 prim_groups: vec![PrimGroup {
                     shader: "shader1",
                     primitive_type: PrimitiveType::TriangleList,
-                    vertices: Some(&vec![(0., 0., 0.)]),
+                    vertices: Some(&vec![[0., 0., 0.]]),
                     normals: None,
                     tangents: None,
                     binormals: None,
