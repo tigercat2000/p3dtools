@@ -1,26 +1,33 @@
 use super::Result;
 use eyre::eyre;
-use gltf_json::{buffer, image::MimeType, validation::Validate, Buffer, Image, Index, Root};
+use gltf_json::{
+    accessor::{GenericComponentType, Type},
+    buffer::{self},
+    image::MimeType,
+    validation::{Checked, Validate},
+    Accessor, Buffer, Image, Index, Root, Texture, Value,
+};
 use p3dparse::chunk::data::kinds::{
     image::ImageFormat,
-    shared::{Colour, Vector2, Vector3},
+    shared::{Vector2, Vector3},
 };
-use std::collections::HashMap;
+use serde_json::json;
+use std::{collections::HashMap, mem::size_of};
 
 /// 10 MB
 const ARBITRARY_BUFFER_LENGTH_LIMIT: u32 = 2u32.pow(10 * 2);
 
 /// This trait is used to add something to a list and returns the index it was put at.
 trait PushReturnIndex {
-    type Output;
+    type Input;
     /// This adds something to a list and returns the index it was put at.
-    fn push_indexed(&mut self, data: Self::Output) -> usize;
+    fn push_indexed(&mut self, data: Self::Input) -> usize;
 }
 
 impl<T> PushReturnIndex for Vec<T> {
-    type Output = T;
+    type Input = T;
 
-    fn push_indexed(&mut self, data: Self::Output) -> usize {
+    fn push_indexed(&mut self, data: Self::Input) -> usize {
         self.push(data);
         self.len() - 1
     }
@@ -78,6 +85,67 @@ impl WriteGltf for f32 {
     }
 }
 
+impl WriteGltf for Vec<Vector2> {
+    fn write_gltf(&self, out: &mut Vec<u8>) {
+        self.iter().for_each(|f| f.write_gltf(out))
+    }
+}
+
+impl WriteGltf for Vec<Vector3> {
+    fn write_gltf(&self, out: &mut Vec<u8>) {
+        self.iter().for_each(|f| f.write_gltf(out))
+    }
+}
+
+impl<T> WriteGltf for &T
+where
+    T: WriteGltf,
+{
+    fn write_gltf(&self, out: &mut Vec<u8>) {
+        (*self).write_gltf(out)
+    }
+}
+
+fn get_min_components_vec3(vec: &[Vector3]) -> Option<gltf_json::Value> {
+    vec.iter()
+        .copied()
+        .reduce(|acc, chunk| {
+            [
+                acc[0].min(chunk[0]),
+                acc[1].min(chunk[1]),
+                acc[2].min(chunk[2]),
+            ]
+        })
+        .map(|f| json!(f))
+}
+
+fn get_max_components_vec3(vec: &[Vector3]) -> Option<gltf_json::Value> {
+    vec.iter()
+        .copied()
+        .reduce(|acc, chunk| {
+            [
+                acc[0].max(chunk[0]),
+                acc[1].max(chunk[1]),
+                acc[2].max(chunk[2]),
+            ]
+        })
+        .map(|f| json!(f))
+}
+
+fn get_min_components_vec2(vec: &[Vector2]) -> Option<gltf_json::Value> {
+    vec.iter()
+        .copied()
+        .reduce(|acc, chunk| [acc[0].min(chunk[0]), acc[1].min(chunk[1])])
+        .map(|f| json!(f))
+}
+
+fn get_max_components_vec2(vec: &[Vector2]) -> Option<gltf_json::Value> {
+    vec.iter()
+        .copied()
+        .reduce(|acc, chunk| [acc[0].max(chunk[0]), acc[1].max(chunk[1])])
+        .map(|f| json!(f))
+}
+
 #[derive(Debug, Default)]
 #[allow(non_camel_case_types)]
 pub struct glTFBuilder {
@@ -95,6 +163,10 @@ impl glTFBuilder {
     /// This is unfortunately necessary because some operations require insertions into two different parts of the struct,
     /// which cannot be done in parallel.
     fn check_validity(&self) -> crate::Result<()> {
+        // Skip validation in release mode.
+        #[cfg(not(debug_assertions))]
+        return Ok(());
+
         let mut errors = Vec::new();
         self.root
             .validate(&self.root, gltf_json::Path::new, &mut |path, error| {
@@ -152,6 +224,8 @@ impl glTFBuilder {
     /// This inserts additional data into an existing [`Buffer`] and
     /// creates a new [`buffer::View`] to that data, then returns
     /// an index to the newly created [`buffer::View`].
+    ///
+    /// This exists for skipping the overhead and... shakiness of [`WriteGltf`].
     fn insert_raw_data(
         &mut self,
         name: Option<&str>,
@@ -190,6 +264,48 @@ impl glTFBuilder {
         Index::new(self.root.buffer_views.push_indexed(buffer_view) as u32)
     }
 
+    /// This inserts additional data into an existing [`Buffer`] and
+    /// creates a new [`buffer::View`] to that data, then returns
+    /// an index to the newly created [`buffer::View`].
+    fn insert_write_gltf<T: WriteGltf>(
+        &mut self,
+        name: Option<&str>,
+        buffer: Index<Buffer>,
+        data: T,
+    ) -> Index<buffer::View> {
+        let (real_buffer, buffer_type) = self.get_buffer_mut(buffer);
+
+        // The index offset of the buffer view into this buffer will be whatever our current
+        // length is. However, the glTF spec asks that we simply don't encode the offset if
+        // it is 0, so we have to account for that.
+        let potential_offset = real_buffer.len() as u32;
+        let byte_offset = if potential_offset != 0 {
+            Some(potential_offset)
+        } else {
+            None
+        };
+
+        data.write_gltf(real_buffer);
+
+        let byte_length = real_buffer.len() as u32 - potential_offset;
+
+        // Always synchronize the buffer_type length.
+        buffer_type.byte_length = real_buffer.len() as u32;
+
+        let buffer_view = buffer::View {
+            buffer,
+            byte_length,
+            byte_offset,
+            byte_stride: None,
+            name: name.map(|x| x.to_owned()),
+            target: None,
+            extensions: None,
+            extras: Default::default(),
+        };
+
+        Index::new(self.root.buffer_views.push_indexed(buffer_view) as u32)
+    }
+
     /// Most accessor data types must be aligned. This has to be accounted for
     /// by adding padding to our [`Buffer`]s. This will automatically pad if needed.
     ///
@@ -212,6 +328,84 @@ impl glTFBuilder {
 
         // Update the byte length.
         buffer_type.byte_length = real_buffer.len() as u32;
+    }
+
+    /// Creates a new [`Accessor`] and immediately checks it's validity, otherwise fails.
+    ///
+    /// It is up to the caller to ensure the buffer_view is aligned correctly.
+    #[allow(clippy::too_many_arguments)]
+    fn create_accessor(
+        &mut self,
+        name: Option<&str>,
+        buffer_view: Index<buffer::View>,
+        byte_offset: u32,
+        count: u32,
+        component_type: Checked<GenericComponentType>,
+        outer_type: Checked<Type>,
+        min: Option<Value>,
+        max: Option<Value>,
+        normalized: bool,
+    ) -> Result<Index<Accessor>> {
+        let index = self.root.accessors.push_indexed(Accessor {
+            buffer_view: Some(buffer_view),
+            byte_offset,
+            count,
+            component_type,
+            extensions: None,
+            extras: Default::default(),
+            type_: outer_type,
+            min,
+            max,
+            name: name.map(|s| s.to_owned()),
+            normalized,
+            sparse: None,
+        });
+
+        self.check_validity()?;
+
+        Ok(Index::new(index as u32))
+    }
+
+    fn create_accessor_vec3(
+        &mut self,
+        name: Option<&str>,
+        buffer_view: Index<buffer::View>,
+        data: &[Vector3],
+    ) -> Result<Index<Accessor>> {
+        self.create_accessor(
+            name,
+            buffer_view,
+            0,
+            data.len() as u32,
+            Checked::Valid(GenericComponentType(
+                gltf_json::accessor::ComponentType::F32,
+            )),
+            Checked::Valid(Type::Vec3),
+            get_min_components_vec3(data),
+            get_max_components_vec3(data),
+            false,
+        )
+    }
+
+    fn create_accessor_vec2(
+        &mut self,
+        name: Option<&str>,
+        buffer_view: Index<buffer::View>,
+        data: &[Vector2],
+    ) -> Result<Index<Accessor>> {
+        self.create_accessor(
+            name,
+            buffer_view,
+            0,
+            data.len() as u32,
+            Checked::Valid(GenericComponentType(
+                gltf_json::accessor::ComponentType::F32,
+            )),
+            Checked::Valid(Type::Vec2),
+            get_min_components_vec2(data),
+            get_max_components_vec2(data),
+            false,
+        )
     }
 
     fn auto_buffer(&mut self, data_size: usize) -> Index<Buffer> {
@@ -238,6 +432,7 @@ impl glTFBuilder {
 
     /// Steps to build:
     /// - Base64 encode [`glTFBuilder::unencoded_buffers`] and place them in their respective [`Buffer::uri`] fields.
+    ///   - TODO: Eventually this should support the other two methods of storing buffers, glb and .bin files; do this here.
     /// - Return [`serde_json::to_string(root)`].
     fn build_internal(self) -> String {
         todo!()
@@ -252,29 +447,20 @@ impl glTFBuilder {
     }
 
     /// Finalize the [`glTFBuilder`] and return the json encoded [`Root`].
-    pub fn build(self) -> String {
-        self.build_internal()
+    pub fn build(self) -> Result<String> {
+        self.check_validity()?;
+        Ok(self.build_internal())
     }
 
     /// Inserts an image.
     pub fn insert_image(
         &mut self,
         name: &str,
-        format: ImageFormat,
+        mime_type: Option<MimeType>,
         data: &[u8],
     ) -> Result<Index<Image>> {
         let buffer = self.auto_buffer(data.len());
         let buffer_view = self.insert_raw_data(Some(name), buffer, data);
-
-        let mime_type = match format {
-            ImageFormat::PNG => Some(MimeType("image/png".into())),
-            e => {
-                return Err(eyre!(
-                    "Only PNG is supported by gltf, but tried to insert {:?}",
-                    e
-                ))
-            }
-        };
 
         let idx = self.root.images.push_indexed(Image {
             buffer_view: Some(buffer_view),
@@ -285,20 +471,46 @@ impl glTFBuilder {
             extras: Default::default(),
         });
 
-        let new_idx = Index::new(idx as u32);
+        self.check_validity()?;
+
+        Ok(Index::new(idx as u32))
+    }
+
+    pub fn insert_texture(&mut self, name: &str, image: Index<Image>) -> Result<Index<Texture>> {
+        let idx = self.root.textures.push_indexed(Texture {
+            name: Some(name.to_owned()),
+            // TODO: Change this if textures turn out badly
+            sampler: None,
+            source: image,
+            extensions: None,
+            extras: Default::default(),
+        });
 
         self.check_validity()?;
 
-        Ok(new_idx)
+        Ok(Index::new(idx as u32))
+    }
+
+    pub fn insert_vec3(&mut self, name: &str, data: &Vec<Vector3>) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 3);
+        self.pad_to_alignment(buffer, size_of::<f32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec3(Some(name), buffer_view, data)
+    }
+
+    pub fn insert_vec2(&mut self, name: &str, data: &Vec<Vector2>) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 2);
+        self.pad_to_alignment(buffer, size_of::<f32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec2(Some(name), buffer_view, data)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use gltf_json::{image::MimeType, Buffer, Index};
-    use p3dparse::chunk::data::kinds::image::ImageFormat;
-
     use crate::builder::glTFBuilder;
+    use gltf_json::{image::MimeType, Buffer, Index};
+    use std::mem::size_of;
 
     fn helper_setup_buffer(builder: &mut glTFBuilder) -> Index<Buffer> {
         let idx = builder.create_buffer(Some("Test Buffer"));
@@ -429,7 +641,7 @@ mod tests {
 
         let mut builder = glTFBuilder::new();
         let image = builder
-            .insert_image("basn0g01.png", ImageFormat::PNG, data)
+            .insert_image("basn0g01.png", Some(MimeType("image/png".into())), data)
             .unwrap();
 
         assert_eq!(image.value(), 0);
@@ -453,5 +665,82 @@ mod tests {
             image_typ.mime_type.clone().unwrap().0,
             "image/png".to_owned()
         );
+    }
+
+    #[test]
+    fn test_texture() {
+        let data = include_bytes!("test_files/basn0g01.png");
+
+        let mut builder = glTFBuilder::new();
+        let image = builder
+            .insert_image("basn0g01.png", Some(MimeType("image/png".into())), data)
+            .unwrap();
+
+        builder.insert_texture("texture1", image).unwrap();
+
+        assert_eq!(builder.root.textures.len(), 1);
+        assert_eq!(builder.root.images.len(), 1);
+        assert_eq!(builder.root.buffers.len(), 1);
+        assert_eq!(builder.root.buffer_views.len(), 1);
+
+        let texture_type = builder.root.textures.first().unwrap();
+        assert_eq!(texture_type.name, Some("texture1".into()));
+        assert_eq!(texture_type.source, image);
+        assert_eq!(texture_type.sampler, None);
+    }
+
+    #[test]
+    fn test_vec3() {
+        let mut builder = glTFBuilder::new();
+        builder
+            .insert_vec3("positions", &vec![[0., 1., 0.], [-1., 0., 0.]])
+            .unwrap();
+
+        let (real_buffer, buffer_typ) = builder.get_buffer(Index::new(0));
+        let accessor_type = builder.root.accessors.first().unwrap();
+
+        assert_eq!(real_buffer.len(), size_of::<f32>() * 3 * 2);
+        assert_eq!(buffer_typ.byte_length, real_buffer.len() as u32);
+        assert_eq!(accessor_type.buffer_view, Some(Index::new(0)));
+        assert_eq!(accessor_type.byte_offset, 0);
+        assert_eq!(
+            accessor_type.component_type.unwrap().0,
+            gltf_json::accessor::ComponentType::F32
+        );
+
+        assert_eq!(
+            accessor_type.min.as_ref().unwrap().to_string(),
+            "[-1.0,0.0,0.0]"
+        );
+        assert_eq!(
+            accessor_type.max.as_ref().unwrap().to_string(),
+            "[0.0,1.0,0.0]"
+        );
+    }
+
+    #[test]
+    fn test_vec2() {
+        let mut builder = glTFBuilder::new();
+        builder
+            .insert_vec2("positions", &vec![[0., 1.], [-1., 0.]])
+            .unwrap();
+
+        let (real_buffer, buffer_typ) = builder.get_buffer(Index::new(0));
+        let accessor_type = builder.root.accessors.first().unwrap();
+
+        assert_eq!(real_buffer.len(), size_of::<f32>() * 2 * 2);
+        assert_eq!(buffer_typ.byte_length, real_buffer.len() as u32);
+        assert_eq!(accessor_type.buffer_view, Some(Index::new(0)));
+        assert_eq!(accessor_type.byte_offset, 0);
+        assert_eq!(
+            accessor_type.component_type.unwrap().0,
+            gltf_json::accessor::ComponentType::F32
+        );
+
+        assert_eq!(
+            accessor_type.min.as_ref().unwrap().to_string(),
+            "[-1.0,0.0]"
+        );
+        assert_eq!(accessor_type.max.as_ref().unwrap().to_string(), "[0.0,1.0]");
     }
 }
