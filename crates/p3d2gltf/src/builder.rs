@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use eyre::eyre;
 use gltf_json::{buffer, validation::Validate, Buffer, Index, Root};
+use p3dparse::chunk::data::kinds::shared::{Colour, Vector2, Vector3};
 
 /// This trait is used to add something to a list and returns the index it was put at.
 trait PushReturnIndex {
@@ -16,6 +17,82 @@ impl<T> PushReturnIndex for Vec<T> {
     fn push_indexed(&mut self, data: Self::Output) -> usize {
         self.push(data);
         self.len() - 1
+    }
+}
+
+trait WriteGltf {
+    fn write_data(&self, out: &mut Vec<u8>);
+}
+
+impl WriteGltf for [u8] {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.extend(self);
+    }
+}
+
+impl WriteGltf for u8 {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.push(*self);
+    }
+}
+
+impl WriteGltf for [u16] {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.extend(self.iter().flat_map(|f| f.to_le_bytes()))
+    }
+}
+
+impl WriteGltf for u16 {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.extend(self.to_le_bytes())
+    }
+}
+
+impl WriteGltf for [u32] {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.extend(self.iter().flat_map(|f| f.to_le_bytes()))
+    }
+}
+
+impl WriteGltf for u32 {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.extend(self.to_le_bytes())
+    }
+}
+
+impl WriteGltf for [f32] {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.extend(self.iter().flat_map(|f| f.to_le_bytes()))
+    }
+}
+
+impl WriteGltf for f32 {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        out.extend(self.to_le_bytes())
+    }
+}
+
+impl WriteGltf for Vector2 {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        self.0.write_data(out);
+        self.1.write_data(out);
+    }
+}
+
+impl WriteGltf for Vector3 {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        self.0.write_data(out);
+        self.1.write_data(out);
+        self.2.write_data(out);
+    }
+}
+
+impl WriteGltf for Colour {
+    fn write_data(&self, out: &mut Vec<u8>) {
+        self.0.write_data(out);
+        self.1.write_data(out);
+        self.2.write_data(out);
+        self.3.write_data(out);
     }
 }
 
@@ -100,13 +177,20 @@ impl glTFBuilder {
     ) -> Index<buffer::View> {
         let (real_buffer, buffer_type) = self.get_buffer_mut(buffer);
 
+        // The index offset of the buffer view into this buffer will be whatever our current
+        // length is. However, the glTF spec asks that we simply don't encode the offset if
+        // it is 0, so we have to account for that.
         let potential_offset = real_buffer.len() as u32;
         let byte_offset = if potential_offset != 0 {
             Some(potential_offset)
         } else {
             None
         };
+
+        // Write the data to the end of the real unencoded vec.
         real_buffer.extend(data);
+
+        // Always synchronize the buffer_type length.
         buffer_type.byte_length = real_buffer.len() as u32;
 
         let buffer_view = buffer::View {
@@ -121,6 +205,30 @@ impl glTFBuilder {
         };
 
         Index::new(self.root.buffer_views.push_indexed(buffer_view) as u32)
+    }
+
+    /// Most accessor data types must be aligned. This has to be accounted for
+    /// by adding padding to our [`Buffer`]s. This will automatically pad if needed.
+    ///
+    /// This won't cause any issues, as [`Buffer`]s are always accessed through
+    /// [`BufferView`]s which we ensure are valid when they are created,
+    /// and this function will never modify any data already referenced.
+    ///
+    /// Example: an f32 accessor will ask:
+    /// ```no_compile
+    /// self.pad_to_alignment(index, std::mem::size_of::<f32>());
+    /// ```
+    fn pad_to_alignment(&mut self, buffer: Index<Buffer>, alignment: usize) {
+        let (real_buffer, buffer_type) = self.get_buffer_mut(buffer);
+
+        // This may do nothing if it is already padded, that's okay.
+        while real_buffer.len() % alignment != 0 {
+            // Zero-pad.
+            real_buffer.push(0);
+        }
+
+        // Update the byte length.
+        buffer_type.byte_length = real_buffer.len() as u32;
     }
 
     /// Steps to build:
@@ -224,5 +332,52 @@ mod tests {
         assert_eq!(real_buffer.len() as u32, buffer.byte_length);
         assert_eq!(real_buffer.first(), Some(&1));
         assert_eq!(real_buffer.last(), Some(&6));
+
+        builder.check_validity().unwrap()
+    }
+
+    #[test]
+    fn test_padding() {
+        let mut builder = glTFBuilder::new();
+        let buffer_idx = helper_setup_buffer(&mut builder);
+        let buffer_view = builder.insert_raw_data(None, buffer_idx, &[1, 2]);
+
+        let (real_buffer, _) = builder.get_buffer(buffer_idx);
+        assert_eq!(real_buffer.len(), 2);
+
+        builder.pad_to_alignment(buffer_idx, std::mem::size_of::<f32>());
+
+        let (real_buffer, _) = builder.get_buffer(buffer_idx);
+        assert_eq!(real_buffer.len(), 4);
+
+        assert_eq!(
+            builder
+                .root
+                .buffer_views
+                .get(buffer_view.value())
+                .unwrap()
+                .byte_length,
+            2
+        );
+
+        // Should still be valid at this point.
+        builder.check_validity().unwrap();
+
+        let new_buffer_view = builder.insert_raw_data(None, buffer_idx, &[3, 4]);
+        let (real_buffer, _) = builder.get_buffer(buffer_idx);
+        assert_eq!(real_buffer.len(), 6);
+
+        assert_eq!(
+            builder
+                .root
+                .buffer_views
+                .get(new_buffer_view.value())
+                .unwrap()
+                .byte_offset,
+            Some(4)
+        );
+
+        // Should still be valid at this point.
+        builder.check_validity().unwrap();
     }
 }
