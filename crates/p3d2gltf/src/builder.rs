@@ -7,12 +7,12 @@ use gltf_json::{
     validation::{Checked, Validate},
     Accessor, Buffer, Image, Index, Root, Texture, Value,
 };
-use p3dparse::chunk::data::kinds::{
-    image::ImageFormat,
-    shared::{Vector2, Vector3},
-};
 use serde_json::json;
 use std::{collections::HashMap, mem::size_of};
+
+pub type Vector2 = [f32; 2];
+pub type Vector3 = [f32; 3];
+pub type Vector4 = [f32; 3];
 
 /// 10 MB
 const ARBITRARY_BUFFER_LENGTH_LIMIT: u32 = 2u32.pow(10 * 2);
@@ -509,7 +509,7 @@ impl glTFBuilder {
 #[cfg(test)]
 mod tests {
     use crate::builder::glTFBuilder;
-    use gltf_json::{image::MimeType, Buffer, Index};
+    use gltf_json::{accessor::Type, image::MimeType, Buffer, Index};
     use std::mem::size_of;
 
     fn helper_setup_buffer(builder: &mut glTFBuilder) -> Index<Buffer> {
@@ -707,6 +707,7 @@ mod tests {
             accessor_type.component_type.unwrap().0,
             gltf_json::accessor::ComponentType::F32
         );
+        assert_eq!(accessor_type.type_.unwrap(), Type::Vec3);
 
         assert_eq!(
             accessor_type.min.as_ref().unwrap().to_string(),
@@ -736,6 +737,7 @@ mod tests {
             accessor_type.component_type.unwrap().0,
             gltf_json::accessor::ComponentType::F32
         );
+        assert_eq!(accessor_type.type_.unwrap(), Type::Vec2);
 
         assert_eq!(
             accessor_type.min.as_ref().unwrap().to_string(),
