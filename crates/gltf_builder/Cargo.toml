@@ -6,10 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eyre = "0.6.8"
+base64 = "0.21.0"
 clap = { version = "4.1.6", features = ["cargo"] }
-itertools = "0.10.5"
+eyre = "0.6.8"
 gltf-json = { version = "1.1.0", features = ["names"] }
+itertools = "0.10.5"
 serde = "1.0.152"
 serde_json = "1.0.93"
-base64 = "0.21.0"

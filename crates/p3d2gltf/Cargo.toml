@@ -6,16 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+base64 = "0.21.0"
 eyre = "0.6.8"
-clap = { version = "4.1.6", features = ["cargo"] }
 itertools = "0.10.5"
-p3dparse = { path = "../p3dparse" }
-p3dhl = { path = "../p3dhl" }
-gltf_builder = { path = "../gltf_builder" }
-gltf-json = { version = "1.1.0", features = ["names"] }
 serde = "1.0.152"
 serde_json = "1.0.93"
-base64 = "0.21.0"
+clap = { version = "4.1.6", features = ["cargo"] }
+p3dhl = { path = "../p3dhl" }
+p3dparse = { path = "../p3dparse" }
+gltf_builder = { path = "../gltf_builder" }
+gltf-json = { version = "1.1.0", features = ["names"] }
 
 [[bin]]
 name = "p3d2gltf"
