@@ -3,7 +3,7 @@ use gltf_builder::glTFBuilder;
 use gltf_json::{material::EmissiveFactor, mesh::Primitive, Index};
 use p3dhl::{Mesh, PrimGroup, Shader};
 use p3dparse::chunk::{data::kinds::image::ImageFormat, Chunk};
-use std::{collections::HashMap, fs::File, io::BufWriter, path::Path};
+use std::{collections::HashMap, path::Path};
 
 type Result<T> = std::result::Result<T, eyre::Error>;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -24,7 +24,8 @@ fn export_primgroup_to_gltf(
     }
 
     if let Some(uv_map) = group.uv_map {
-        builder.insert_uv_map(mesh_idx, prim_group_idx, uv_map)?;
+        let inverse_y = uv_map.iter().map(|[x, y]| [*x, -*y]).collect();
+        builder.insert_uv_map(mesh_idx, prim_group_idx, &inverse_y)?;
     }
 
     if let Some(indices) = group.indices {
@@ -124,6 +125,7 @@ fn export_shaders_to_gltf(
 
 fn export_mesh_to_gltf(mesh: Mesh, dest: &Path) -> Result<()> {
     let mut builder = glTFBuilder::new();
+    builder.set_generator(&format!("Khronos glTF p3d2gltf v{}", VERSION));
 
     let shaders = export_shaders_to_gltf(&mut builder, &mesh)?;
 
@@ -135,6 +137,9 @@ fn export_mesh_to_gltf(mesh: Mesh, dest: &Path) -> Result<()> {
             builder.set_primitive_material(mesh_idx, group_idx, *shader);
         }
     }
+
+    let mesh_node = builder.insert_mesh_node(mesh.name, mesh_idx);
+    builder.insert_scene("scene", true, &[mesh_node]);
 
     let string = builder.build()?;
 
@@ -149,7 +154,7 @@ pub fn export_all_to_gltf(tree: &[Chunk], dest: &Path) -> Result<()> {
     for hlt in hltypes {
         match hlt {
             p3dhl::HighLevelType::Mesh(mesh) => export_mesh_to_gltf(mesh, dest)?,
-            p3dhl::HighLevelType::Skin(skin) => {} // export_skin_to_gltf(skin, dest)?,
+            p3dhl::HighLevelType::Skin(_skin) => {} // export_skin_to_gltf(skin, dest)?,
             _ => todo!(),
         }
     }

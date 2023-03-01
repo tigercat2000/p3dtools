@@ -8,10 +8,10 @@ use gltf_json::{
         AlphaCutoff, AlphaMode, EmissiveFactor, NormalTexture, OcclusionTexture,
         PbrMetallicRoughness,
     },
-    mesh::{Mode, Primitive, Semantic},
+    mesh::{Primitive, Semantic},
     texture::Info,
     validation::{Checked, Validate},
-    Accessor, Buffer, Image, Index, Material, Mesh, Root, Texture, Value,
+    Accessor, Buffer, Image, Index, Material, Mesh, Node, Root, Scene, Texture, Value,
 };
 use serde_json::json;
 use std::{collections::HashMap, mem::size_of};
@@ -195,6 +195,7 @@ impl glTFBuilder {
     /// both the real unencoded data from [`glTFBuilder::unencoded_buffers`]
     /// as well as the [`Buffer`] entry, so that internal functions can view the
     /// data as if it were combined.
+    #[allow(dead_code)]
     fn get_buffer(&self, buffer: Index<Buffer>) -> (&Vec<u8>, &Buffer) {
         (
             self.unencoded_buffers.get(&buffer).unwrap(),
@@ -746,6 +747,49 @@ impl glTFBuilder {
         let mesh = self.root.meshes.get_mut(mesh.value()).unwrap();
         let primitive = mesh.primitives.get_mut(primitive.value()).unwrap();
         primitive.material = Some(material);
+    }
+
+    pub fn insert_node(&mut self, node: Node) -> Index<Node> {
+        Index::new(self.root.nodes.push_indexed(node) as u32)
+    }
+
+    pub fn insert_mesh_node(&mut self, name: &str, mesh: Index<Mesh>) -> Index<Node> {
+        self.insert_node(Node {
+            camera: None,
+            children: None,
+            extensions: Default::default(),
+            extras: Default::default(),
+            matrix: None,
+            mesh: Some(mesh),
+            name: Some(name.into()),
+            rotation: None,
+            scale: None,
+            translation: None,
+            skin: None,
+            weights: None,
+        })
+    }
+
+    pub fn insert_scene(
+        &mut self,
+        name: &str,
+        default: bool,
+        nodes: &[Index<Node>],
+    ) -> Index<Scene> {
+        let idx = Index::new(self.root.scenes.push_indexed(Scene {
+            extensions: Default::default(),
+            extras: Default::default(),
+            name: Some(name.into()),
+            nodes: nodes.to_vec(),
+        }) as u32);
+        if default {
+            self.root.scene = Some(idx);
+        }
+        idx
+    }
+
+    pub fn set_generator(&mut self, generator: &str) {
+        self.root.asset.generator = Some(generator.into())
     }
 }
 
