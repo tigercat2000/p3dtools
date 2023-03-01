@@ -1,4 +1,5 @@
 use clap::{arg, command, value_parser};
+use p3d2gltf::export_all_to_gltf;
 // use p3d2gltf::export_all_to_gltf;
 use p3dparse::Bytes;
 use std::{fs::File, io::Read, path::PathBuf};
@@ -32,7 +33,7 @@ fn main() {
             std::fs::create_dir_all(dest)
                 .unwrap_or_else(|_| panic!("Failed to create directory {:?}", dest));
 
-            // export_all_to_gltf(&p3d_file, dest).expect("Failed to export obj");
+            export_all_to_gltf(&p3d_file, dest).expect("Failed to export obj");
         }
         _ => unreachable!(),
     }

@@ -1,11 +1,17 @@
+use base64::Engine;
 use eyre::eyre;
 use gltf_json::{
     accessor::{ComponentType, GenericComponentType, Type},
     buffer::{self},
     image::MimeType,
+    material::{
+        AlphaCutoff, AlphaMode, EmissiveFactor, NormalTexture, OcclusionTexture,
+        PbrMetallicRoughness,
+    },
     mesh::{Mode, Primitive, Semantic},
+    texture::Info,
     validation::{Checked, Validate},
-    Accessor, Buffer, Image, Index, Mesh, Root, Texture, Value,
+    Accessor, Buffer, Image, Index, Material, Mesh, Root, Texture, Value,
 };
 use serde_json::json;
 use std::{collections::HashMap, mem::size_of};
@@ -171,10 +177,6 @@ impl glTFBuilder {
     /// This is unfortunately necessary because some operations require insertions into two different parts of the struct,
     /// which cannot be done in parallel.
     fn check_validity(&self) -> crate::Result<()> {
-        // Skip validation in release mode.
-        #[cfg(not(debug_assertions))]
-        return Ok(());
-
         let mut errors = Vec::new();
         self.root
             .validate(&self.root, gltf_json::Path::new, &mut |path, error| {
@@ -460,17 +462,49 @@ impl glTFBuilder {
             data.len() as u32,
             Checked::Valid(GenericComponentType(ComponentType::U32)),
             Checked::Valid(Type::Scalar),
-            Some(json!(data.iter().min().unwrap())),
-            Some(json!(data.iter().max().unwrap())),
+            // Trivial to determine but it doesn't like us providing
+            None,
+            None,
             false,
         )
     }
+
+    /// Inserts [`Vec<Vector3>`] data, like positions.
+    fn insert_vec3(&mut self, name: &str, data: &Vec<Vector3>) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 3);
+        self.pad_to_alignment(buffer, size_of::<f32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec3(Some(name), buffer_view, data)
+    }
+
+    /// Inserts [`Vec<Vector2>`] data, like UVs.
+    fn insert_vec2(&mut self, name: &str, data: &Vec<Vector2>) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 2);
+        self.pad_to_alignment(buffer, size_of::<f32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec2(Some(name), buffer_view, data)
+    }
+
+    /// Inserts [`Vec<u32>`] data, like Indices.
+    fn insert_vec_u32(&mut self, name: &str, data: &Vec<u32>) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<u32>());
+        self.pad_to_alignment(buffer, size_of::<u32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec_u32(Some(name), buffer_view, data)
+    }
+
     /// Steps to build:
     /// - Base64 encode [`glTFBuilder::unencoded_buffers`] and place them in their respective [`Buffer::uri`] fields.
     ///   - TODO: Eventually this should support the other two methods of storing buffers, glb and .bin files; do this here.
     /// - Return [`serde_json::to_string(root)`].
-    fn build_internal(self) -> String {
-        todo!()
+    fn build_internal(mut self) -> Result<String> {
+        self.unencoded_buffers.iter().for_each(|(idx, buf)| {
+            let mut encoded = "data:application/octet-stream;base64,".to_owned();
+            base64::engine::general_purpose::STANDARD.encode_string(buf, &mut encoded);
+            self.root.buffers.get_mut(idx.value()).unwrap().uri = Some(encoded);
+        });
+
+        Ok(serde_json::to_string_pretty(&self.root)?)
     }
 }
 
@@ -483,8 +517,9 @@ impl glTFBuilder {
 
     /// Finalize the [`glTFBuilder`] and return the json encoded [`Root`].
     pub fn build(self) -> Result<String> {
+        // Always check validity before returning our built gltf.
         self.check_validity()?;
-        Ok(self.build_internal())
+        self.build_internal()
     }
 
     /// Inserts an image.
@@ -506,6 +541,8 @@ impl glTFBuilder {
             extras: Default::default(),
         });
 
+        // Skip validation in release mode.
+        #[cfg(not(debug_assertions))]
         self.check_validity()?;
 
         Ok(Index::new(idx as u32))
@@ -522,33 +559,11 @@ impl glTFBuilder {
             extras: Default::default(),
         });
 
+        // Skip validation in release mode.
+        #[cfg(not(debug_assertions))]
         self.check_validity()?;
 
         Ok(Index::new(idx as u32))
-    }
-
-    /// Inserts [`Vec<Vector3>`] data, like positions.
-    pub fn insert_vec3(&mut self, name: &str, data: &Vec<Vector3>) -> Result<Index<Accessor>> {
-        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 3);
-        self.pad_to_alignment(buffer, size_of::<f32>());
-        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
-        self.create_accessor_vec3(Some(name), buffer_view, data)
-    }
-
-    /// Inserts [`Vec<Vector2>`] data, like UVs.
-    pub fn insert_vec2(&mut self, name: &str, data: &Vec<Vector2>) -> Result<Index<Accessor>> {
-        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 2);
-        self.pad_to_alignment(buffer, size_of::<f32>());
-        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
-        self.create_accessor_vec2(Some(name), buffer_view, data)
-    }
-
-    /// Inserts [`Vec<u32>`] data, like Indices.
-    pub fn insert_vec_u32(&mut self, name: &str, data: &Vec<u32>) -> Result<Index<Accessor>> {
-        let buffer = self.auto_buffer(data.len() * size_of::<u32>());
-        self.pad_to_alignment(buffer, size_of::<u32>());
-        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
-        self.create_accessor_vec_u32(Some(name), buffer_view, data)
     }
 
     /// Inserts a new mesh.
@@ -614,7 +629,7 @@ impl glTFBuilder {
     ) -> Result<()> {
         let accessor = self.insert_vec3(
             &format!(
-                "{} normals positions",
+                "{} normals",
                 self.root
                     .meshes
                     .get(mesh.value())
@@ -644,7 +659,7 @@ impl glTFBuilder {
     ) -> Result<()> {
         let accessor = self.insert_vec2(
             &format!(
-                "{} normals positions",
+                "{} uv map",
                 self.root
                     .meshes
                     .get(mesh.value())
@@ -665,12 +680,79 @@ impl glTFBuilder {
 
         Ok(())
     }
+
+    pub fn insert_indices(
+        &mut self,
+        mesh: Index<Mesh>,
+        primitive: Index<Primitive>,
+        data: &Vec<u32>,
+    ) -> Result<()> {
+        let accessor = self.insert_vec_u32(
+            &format!(
+                "{} indices",
+                self.root
+                    .meshes
+                    .get(mesh.value())
+                    .unwrap()
+                    .name
+                    .as_ref()
+                    .unwrap()
+            ),
+            data,
+        )?;
+
+        let mesh = self.root.meshes.get_mut(mesh.value()).unwrap();
+        let primitive = mesh.primitives.get_mut(primitive.value()).unwrap();
+
+        primitive.indices = Some(accessor);
+
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn insert_material(
+        &mut self,
+        name: &str,
+        alpha_cutoff: Option<AlphaCutoff>,
+        alpha_mode: AlphaMode,
+        double_sided: bool,
+        pbr_metallic_roughness: PbrMetallicRoughness,
+        normal_texture: Option<NormalTexture>,
+        occlusion_texture: Option<OcclusionTexture>,
+        emissive_texture: Option<Info>,
+        emissive_factor: EmissiveFactor,
+    ) -> Index<Material> {
+        Index::new(self.root.materials.push_indexed(Material {
+            alpha_cutoff,
+            alpha_mode: Checked::Valid(alpha_mode),
+            double_sided,
+            name: Some(name.into()),
+            pbr_metallic_roughness,
+            normal_texture,
+            occlusion_texture,
+            emissive_texture,
+            emissive_factor,
+            extensions: Default::default(),
+            extras: Default::default(),
+        }) as u32)
+    }
+
+    pub fn set_primitive_material(
+        &mut self,
+        mesh: Index<Mesh>,
+        primitive: Index<Primitive>,
+        material: Index<Material>,
+    ) {
+        let mesh = self.root.meshes.get_mut(mesh.value()).unwrap();
+        let primitive = mesh.primitives.get_mut(primitive.value()).unwrap();
+        primitive.material = Some(material);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::glTFBuilder;
-    use gltf_json::{accessor::Type, image::MimeType, mesh::Mode, Buffer, Index};
+    use gltf_json::{accessor::Type, image::MimeType, Buffer, Index};
     use std::mem::size_of;
 
     fn helper_setup_buffer(builder: &mut glTFBuilder) -> Index<Buffer> {
