@@ -1,8 +1,15 @@
+pub mod trait_components;
+use trait_components::MinMaxComponents;
+pub mod trait_le_bytes;
+use trait_le_bytes::WriteLEBytes;
+pub mod types;
+pub use types::{Result, Vector2, Vector3, Vector4};
+
 use base64::Engine;
 use eyre::eyre;
 use gltf_json::{
     accessor::{ComponentType, GenericComponentType, Type},
-    buffer::{self},
+    buffer,
     image::MimeType,
     material::{
         AlphaCutoff, AlphaMode, EmissiveFactor, NormalTexture, OcclusionTexture,
@@ -15,12 +22,6 @@ use gltf_json::{
 };
 use serde_json::json;
 use std::{collections::HashMap, mem::size_of};
-
-pub type Result<T> = std::result::Result<T, eyre::Error>;
-
-pub type Vector2 = [f32; 2];
-pub type Vector3 = [f32; 3];
-pub type Vector4 = [f32; 4];
 
 /// 10 MB
 const ARBITRARY_BUFFER_LENGTH_LIMIT: u32 = 2u32.pow(10 * 2);
@@ -39,125 +40,6 @@ impl<T> PushReturnIndex for Vec<T> {
         self.push(data);
         self.len() - 1
     }
-}
-
-trait WriteGltf {
-    fn write_gltf(&self, out: &mut Vec<u8>);
-}
-
-impl WriteGltf for [u8] {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.extend(self);
-    }
-}
-
-impl WriteGltf for u8 {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.push(*self);
-    }
-}
-
-impl WriteGltf for [u16] {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.extend(self.iter().flat_map(|f| f.to_le_bytes()))
-    }
-}
-
-impl WriteGltf for u16 {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.extend(self.to_le_bytes())
-    }
-}
-
-impl WriteGltf for [u32] {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.extend(self.iter().flat_map(|f| f.to_le_bytes()))
-    }
-}
-
-impl WriteGltf for u32 {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.extend(self.to_le_bytes())
-    }
-}
-
-impl WriteGltf for [f32] {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.extend(self.iter().flat_map(|f| f.to_le_bytes()))
-    }
-}
-
-impl WriteGltf for f32 {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        out.extend(self.to_le_bytes())
-    }
-}
-
-impl WriteGltf for Vec<u32> {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        self.iter().for_each(|f| f.write_gltf(out))
-    }
-}
-
-impl WriteGltf for Vec<Vector2> {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        self.iter().for_each(|f| f.write_gltf(out))
-    }
-}
-
-impl WriteGltf for Vec<Vector3> {
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        self.iter().for_each(|f| f.write_gltf(out))
-    }
-}
-
-impl<T> WriteGltf for &T
-where
-    T: WriteGltf,
-{
-    fn write_gltf(&self, out: &mut Vec<u8>) {
-        (*self).write_gltf(out)
-    }
-}
-
-fn get_min_components_vec3(vec: &[Vector3]) -> Option<gltf_json::Value> {
-    vec.iter()
-        .copied()
-        .reduce(|acc, chunk| {
-            [
-                acc[0].min(chunk[0]),
-                acc[1].min(chunk[1]),
-                acc[2].min(chunk[2]),
-            ]
-        })
-        .map(|f| json!(f))
-}
-
-fn get_max_components_vec3(vec: &[Vector3]) -> Option<gltf_json::Value> {
-    vec.iter()
-        .copied()
-        .reduce(|acc, chunk| {
-            [
-                acc[0].max(chunk[0]),
-                acc[1].max(chunk[1]),
-                acc[2].max(chunk[2]),
-            ]
-        })
-        .map(|f| json!(f))
-}
-
-fn get_min_components_vec2(vec: &[Vector2]) -> Option<gltf_json::Value> {
-    vec.iter()
-        .copied()
-        .reduce(|acc, chunk| [acc[0].min(chunk[0]), acc[1].min(chunk[1])])
-        .map(|f| json!(f))
-}
-
-fn get_max_components_vec2(vec: &[Vector2]) -> Option<gltf_json::Value> {
-    vec.iter()
-        .copied()
-        .reduce(|acc, chunk| [acc[0].max(chunk[0]), acc[1].max(chunk[1])])
-        .map(|f| json!(f))
 }
 
 #[derive(Debug, Default)]
@@ -278,7 +160,7 @@ impl glTFBuilder {
     /// This inserts additional data into an existing [`Buffer`] and
     /// creates a new [`buffer::View`] to that data, then returns
     /// an index to the newly created [`buffer::View`].
-    fn insert_write_gltf<T: WriteGltf>(
+    fn insert_write_gltf<T: WriteLEBytes>(
         &mut self,
         name: Option<&str>,
         buffer: Index<Buffer>,
@@ -400,6 +282,30 @@ impl glTFBuilder {
         Ok(Index::new(index as u32))
     }
 
+    /// This is a shortcut to create an [`Accessor`] with [`ComponentType::F32`] and [`Type::Vec4`]
+    ///
+    /// As with [`create_accessor`], it's up to the caller to pad the buffer to the right alignment
+    /// before calling this function.
+    #[allow(dead_code)]
+    fn create_accessor_vec4(
+        &mut self,
+        name: Option<&str>,
+        buffer_view: Index<buffer::View>,
+        data: &[Vector4],
+    ) -> Result<Index<Accessor>> {
+        self.create_accessor(
+            name,
+            buffer_view,
+            0,
+            data.len() as u32,
+            Checked::Valid(GenericComponentType(ComponentType::F32)),
+            Checked::Valid(Type::Vec4),
+            data.min_components().map(|f| json!(f)),
+            data.max_components().map(|f| json!(f)),
+            false,
+        )
+    }
+
     /// This is a shortcut to create an [`Accessor`] with [`ComponentType::F32`] and [`Type::Vec3`]
     ///
     /// As with [`create_accessor`], it's up to the caller to pad the buffer to the right alignment
@@ -417,8 +323,8 @@ impl glTFBuilder {
             data.len() as u32,
             Checked::Valid(GenericComponentType(ComponentType::F32)),
             Checked::Valid(Type::Vec3),
-            get_min_components_vec3(data),
-            get_max_components_vec3(data),
+            data.min_components().map(|f| json!(f)),
+            data.max_components().map(|f| json!(f)),
             false,
         )
     }
@@ -440,8 +346,8 @@ impl glTFBuilder {
             data.len() as u32,
             Checked::Valid(GenericComponentType(ComponentType::F32)),
             Checked::Valid(Type::Vec2),
-            get_min_components_vec2(data),
-            get_max_components_vec2(data),
+            data.min_components().map(|f| json!(f)),
+            data.max_components().map(|f| json!(f)),
             false,
         )
     }
@@ -471,7 +377,7 @@ impl glTFBuilder {
     }
 
     /// Inserts [`Vec<Vector3>`] data, like positions.
-    fn insert_vec3(&mut self, name: &str, data: &Vec<Vector3>) -> Result<Index<Accessor>> {
+    fn insert_vec3(&mut self, name: &str, data: &[Vector3]) -> Result<Index<Accessor>> {
         let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 3);
         self.pad_to_alignment(buffer, size_of::<f32>());
         let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
@@ -479,7 +385,7 @@ impl glTFBuilder {
     }
 
     /// Inserts [`Vec<Vector2>`] data, like UVs.
-    fn insert_vec2(&mut self, name: &str, data: &Vec<Vector2>) -> Result<Index<Accessor>> {
+    fn insert_vec2(&mut self, name: &str, data: &[Vector2]) -> Result<Index<Accessor>> {
         let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 2);
         self.pad_to_alignment(buffer, size_of::<f32>());
         let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
@@ -487,7 +393,7 @@ impl glTFBuilder {
     }
 
     /// Inserts [`Vec<u32>`] data, like Indices.
-    fn insert_vec_u32(&mut self, name: &str, data: &Vec<u32>) -> Result<Index<Accessor>> {
+    fn insert_vec_u32(&mut self, name: &str, data: &[u32]) -> Result<Index<Accessor>> {
         let buffer = self.auto_buffer(data.len() * size_of::<u32>());
         self.pad_to_alignment(buffer, size_of::<u32>());
         let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
@@ -596,7 +502,7 @@ impl glTFBuilder {
         &mut self,
         mesh: Index<Mesh>,
         primitive: Index<Primitive>,
-        data: &Vec<Vector3>,
+        data: &[Vector3],
     ) -> Result<()> {
         let accessor = self.insert_vec3(
             &format!(
@@ -626,7 +532,7 @@ impl glTFBuilder {
         &mut self,
         mesh: Index<Mesh>,
         primitive: Index<Primitive>,
-        data: &Vec<Vector3>,
+        data: &[Vector3],
     ) -> Result<()> {
         let accessor = self.insert_vec3(
             &format!(
@@ -656,7 +562,7 @@ impl glTFBuilder {
         &mut self,
         mesh: Index<Mesh>,
         primitive: Index<Primitive>,
-        data: &Vec<Vector2>,
+        data: &[Vector2],
     ) -> Result<()> {
         let accessor = self.insert_vec2(
             &format!(
@@ -686,7 +592,7 @@ impl glTFBuilder {
         &mut self,
         mesh: Index<Mesh>,
         primitive: Index<Primitive>,
-        data: &Vec<u32>,
+        data: &[u32],
     ) -> Result<()> {
         let accessor = self.insert_vec_u32(
             &format!(
@@ -980,7 +886,7 @@ mod tests {
     fn test_vec3() {
         let mut builder = glTFBuilder::new();
         builder
-            .insert_vec3("positions", &vec![[0., 1., 0.], [-1., 0., 0.]])
+            .insert_vec3("positions", &[[0., 1., 0.], [-1., 0., 0.]])
             .unwrap();
 
         let (real_buffer, buffer_typ) = builder.get_buffer(Index::new(0));
@@ -1010,7 +916,7 @@ mod tests {
     fn test_vec2() {
         let mut builder = glTFBuilder::new();
         builder
-            .insert_vec2("positions", &vec![[0., 1.], [-1., 0.]])
+            .insert_vec2("positions", &[[0., 1.], [-1., 0.]])
             .unwrap();
 
         let (real_buffer, buffer_typ) = builder.get_buffer(Index::new(0));
@@ -1044,7 +950,7 @@ mod tests {
             .insert_positions(
                 mesh,
                 primitive,
-                &vec![[0., 0., 0.], [0., 0., 1.], [0., 1., 0.5]],
+                &[[0., 0., 0.], [0., 0., 1.], [0., 1., 0.5]],
             )
             .expect("Failed to insert positions");
 

@@ -24,7 +24,7 @@ fn export_primgroup_to_gltf(
     }
 
     if let Some(uv_map) = group.uv_map {
-        let inverse_y = uv_map.iter().map(|[x, y]| [*x, -*y]).collect();
+        let inverse_y: Vec<_> = uv_map.iter().map(|[x, y]| [*x, -*y]).collect();
         builder.insert_uv_map(mesh_idx, prim_group_idx, &inverse_y)?;
     }
 
