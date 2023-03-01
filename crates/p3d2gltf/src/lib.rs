@@ -1,7 +1,7 @@
 use eyre::eyre;
 use gltf_builder::glTFBuilder;
 use gltf_json::{material::EmissiveFactor, mesh::Primitive, Index};
-use p3dhl::{Mesh, PrimGroup, Shader};
+use p3dhl::{Mesh, PrimGroup, Shader, Skin};
 use p3dparse::chunk::{data::kinds::image::ImageFormat, Chunk};
 use std::{collections::HashMap, path::Path};
 
@@ -50,11 +50,11 @@ fn export_texture_to_gltf(
 
 fn export_shader_to_gltf(
     builder: &mut glTFBuilder,
-    mesh: &Mesh,
     shader: &Shader,
+    textures: &[(&str, ImageFormat, &[u8])],
 ) -> Result<Index<gltf_json::Material>> {
     let texture_to_export = if let Some(tex) = shader.texture {
-        let option = mesh.textures.iter().find(|(name, _, _)| *name == tex);
+        let option = textures.iter().find(|(name, _, _)| *name == tex);
         if option.is_none() {
             eprintln!("Warning, failed to find requested texture {}", tex);
         }
@@ -110,14 +110,15 @@ fn export_shader_to_gltf(
 
 fn export_shaders_to_gltf(
     builder: &mut glTFBuilder,
-    mesh: &Mesh,
+    shaders: &[Shader],
+    textures: &[(&str, ImageFormat, &[u8])],
 ) -> Result<HashMap<String, Index<gltf_json::Material>>> {
-    mesh.shaders
+    shaders
         .iter()
         .map(|shader| {
             Ok((
                 shader.name.into(),
-                export_shader_to_gltf(builder, mesh, shader)?,
+                export_shader_to_gltf(builder, shader, textures)?,
             ))
         })
         .collect()
@@ -127,7 +128,32 @@ fn export_mesh_to_gltf(mesh: Mesh, dest: &Path) -> Result<()> {
     let mut builder = glTFBuilder::new();
     builder.set_generator(&format!("Khronos glTF p3d2gltf v{}", VERSION));
 
-    let shaders = export_shaders_to_gltf(&mut builder, &mesh)?;
+    let shaders = export_shaders_to_gltf(&mut builder, &mesh.shaders, &mesh.textures)?;
+
+    let mesh_idx = builder.insert_mesh(mesh.name);
+
+    for group in mesh.prim_groups {
+        let group_idx = export_primgroup_to_gltf(&mut builder, mesh_idx, &group)?;
+        if let Some(shader) = shaders.get(group.shader) {
+            builder.set_primitive_material(mesh_idx, group_idx, *shader);
+        }
+    }
+
+    let mesh_node = builder.insert_mesh_node(mesh.name, mesh_idx);
+    builder.insert_scene("scene", true, &[mesh_node]);
+
+    let string = builder.build()?;
+
+    std::fs::write(dest.join(mesh.name).with_extension("gltf"), string)?;
+
+    Ok(())
+}
+
+fn export_skin_to_gltf(mesh: Skin, dest: &Path) -> Result<()> {
+    let mut builder = glTFBuilder::new();
+    builder.set_generator(&format!("Khronos glTF p3d2gltf v{}", VERSION));
+
+    let shaders = export_shaders_to_gltf(&mut builder, &mesh.shaders, &mesh.textures)?;
 
     let mesh_idx = builder.insert_mesh(mesh.name);
 
@@ -154,7 +180,7 @@ pub fn export_all_to_gltf(tree: &[Chunk], dest: &Path) -> Result<()> {
     for hlt in hltypes {
         match hlt {
             p3dhl::HighLevelType::Mesh(mesh) => export_mesh_to_gltf(mesh, dest)?,
-            p3dhl::HighLevelType::Skin(_skin) => {} // export_skin_to_gltf(skin, dest)?,
+            p3dhl::HighLevelType::Skin(skin) => export_skin_to_gltf(skin, dest)?,
             _ => todo!(),
         }
     }
