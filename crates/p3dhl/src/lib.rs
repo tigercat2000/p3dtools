@@ -95,7 +95,7 @@ pub struct PrimGroup<'a> {
     pub binormals: Option<&'a Vec<Vector3>>,
     pub indices: Option<&'a Vec<u32>>,
     pub uv_map: Option<&'a Vec<Vector2>>,
-    pub matrices: Option<&'a Vec<u32>>,
+    pub matrices: Option<&'a Vec<Colour>>,
     pub matrix_palettes: Option<&'a Vec<u32>>,
     pub weights: Option<&'a Vec<Vector3>>,
 }

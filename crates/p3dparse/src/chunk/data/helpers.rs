@@ -59,10 +59,18 @@ pub fn read_compressed_quaternion(bytes: &mut Bytes) -> Result<Quaternion> {
 }
 
 pub fn read_colour(bytes: &mut Bytes) -> Result<Colour> {
-    Ok([
+    let mut slice = [
+        // B
         bytes.safe_get_u8()?,
+        // G
         bytes.safe_get_u8()?,
+        // R
         bytes.safe_get_u8()?,
+        // A
         bytes.safe_get_u8()?,
-    ])
+    ];
+
+    slice.reverse();
+
+    Ok(slice)
 }

@@ -71,3 +71,55 @@ impl MinMaxComponents for &[Vector4] {
         })
     }
 }
+
+impl MinMaxComponents for &[[u32; 4]] {
+    type Item = [u32; 4];
+
+    fn min_components(&self) -> Option<Self::Item> {
+        self.iter().copied().reduce(|acc, chunk| {
+            [
+                acc[0].min(chunk[0]),
+                acc[1].min(chunk[1]),
+                acc[2].min(chunk[2]),
+                acc[3].min(chunk[3]),
+            ]
+        })
+    }
+
+    fn max_components(&self) -> Option<Self::Item> {
+        self.iter().copied().reduce(|acc, chunk| {
+            [
+                acc[0].max(chunk[0]),
+                acc[1].max(chunk[1]),
+                acc[2].max(chunk[2]),
+                acc[3].max(chunk[3]),
+            ]
+        })
+    }
+}
+
+impl MinMaxComponents for &[[u16; 4]] {
+    type Item = [u16; 4];
+
+    fn min_components(&self) -> Option<Self::Item> {
+        self.iter().copied().reduce(|acc, chunk| {
+            [
+                acc[0].min(chunk[0]),
+                acc[1].min(chunk[1]),
+                acc[2].min(chunk[2]),
+                acc[3].min(chunk[3]),
+            ]
+        })
+    }
+
+    fn max_components(&self) -> Option<Self::Item> {
+        self.iter().copied().reduce(|acc, chunk| {
+            [
+                acc[0].max(chunk[0]),
+                acc[1].max(chunk[1]),
+                acc[2].max(chunk[2]),
+                acc[3].max(chunk[3]),
+            ]
+        })
+    }
+}

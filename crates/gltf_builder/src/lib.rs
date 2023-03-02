@@ -15,10 +15,10 @@ use gltf_json::{
         AlphaCutoff, AlphaMode, EmissiveFactor, NormalTexture, OcclusionTexture,
         PbrMetallicRoughness,
     },
-    mesh::{Primitive, Semantic},
+    mesh::{Mode, Primitive, Semantic},
     texture::Info,
     validation::{Checked, Validate},
-    Accessor, Buffer, Image, Index, Material, Mesh, Node, Root, Scene, Texture, Value,
+    Accessor, Buffer, Image, Index, Material, Mesh, Node, Root, Scene, Skin, Texture, Value,
 };
 use serde_json::json;
 use std::{collections::HashMap, mem::size_of};
@@ -282,6 +282,54 @@ impl glTFBuilder {
         Ok(Index::new(index as u32))
     }
 
+    /// This is a shortcut to create an [`Accessor`] with [`ComponentType::U16`] and [`Type::Vec4`]
+    ///
+    /// As with [`create_accessor`], it's up to the caller to pad the buffer to the right alignment
+    /// before calling this function.
+    #[allow(dead_code)]
+    fn create_accessor_vec4_u16(
+        &mut self,
+        name: Option<&str>,
+        buffer_view: Index<buffer::View>,
+        data: &[[u16; 4]],
+    ) -> Result<Index<Accessor>> {
+        self.create_accessor(
+            name,
+            buffer_view,
+            0,
+            data.len() as u32,
+            Checked::Valid(GenericComponentType(ComponentType::U16)),
+            Checked::Valid(Type::Vec4),
+            data.min_components().map(|f| json!(f)),
+            data.max_components().map(|f| json!(f)),
+            false,
+        )
+    }
+
+    /// This is a shortcut to create an [`Accessor`] with [`ComponentType::U32`] and [`Type::Vec4`]
+    ///
+    /// As with [`create_accessor`], it's up to the caller to pad the buffer to the right alignment
+    /// before calling this function.
+    #[allow(dead_code)]
+    fn create_accessor_vec4_u32(
+        &mut self,
+        name: Option<&str>,
+        buffer_view: Index<buffer::View>,
+        data: &[[u32; 4]],
+    ) -> Result<Index<Accessor>> {
+        self.create_accessor(
+            name,
+            buffer_view,
+            0,
+            data.len() as u32,
+            Checked::Valid(GenericComponentType(ComponentType::U32)),
+            Checked::Valid(Type::Vec4),
+            data.min_components().map(|f| json!(f)),
+            data.max_components().map(|f| json!(f)),
+            false,
+        )
+    }
+
     /// This is a shortcut to create an [`Accessor`] with [`ComponentType::F32`] and [`Type::Vec4`]
     ///
     /// As with [`create_accessor`], it's up to the caller to pad the buffer to the right alignment
@@ -374,6 +422,31 @@ impl glTFBuilder {
             None,
             false,
         )
+    }
+
+    /// Inserts [`Vec<[u16; 4]>`] data, like bones.
+    fn insert_vec4_u16(&mut self, name: &str, data: &[[u16; 4]]) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<u16>() * 4);
+        self.pad_to_alignment(buffer, size_of::<u16>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec4_u16(Some(name), buffer_view, data)
+    }
+
+    /// Inserts [`Vec<[u32; 4]>`] data, like bones.
+    #[allow(dead_code)]
+    fn insert_vec4_u32(&mut self, name: &str, data: &[[u32; 4]]) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<u32>() * 4);
+        self.pad_to_alignment(buffer, size_of::<u32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec4_u32(Some(name), buffer_view, data)
+    }
+
+    /// Inserts [`Vec<Vector4>`] data, like weights.
+    fn insert_vec4(&mut self, name: &str, data: &[Vector4]) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 4);
+        self.pad_to_alignment(buffer, size_of::<f32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_vec4(Some(name), buffer_view, data)
     }
 
     /// Inserts [`Vec<Vector3>`] data, like positions.
@@ -484,7 +557,7 @@ impl glTFBuilder {
         }) as u32)
     }
 
-    pub fn insert_primitive(&mut self, mesh: Index<Mesh>) -> Index<Primitive> {
+    pub fn insert_primitive(&mut self, mesh: Index<Mesh>, mode: Mode) -> Index<Primitive> {
         let mesh = self.root.meshes.get_mut(mesh.value()).unwrap();
 
         Index::new(mesh.primitives.push_indexed(Primitive {
@@ -493,7 +566,7 @@ impl glTFBuilder {
             extras: Default::default(),
             indices: Default::default(),
             material: Default::default(),
-            mode: Default::default(),
+            mode: Checked::Valid(mode),
             targets: Default::default(),
         }) as u32)
     }
@@ -554,6 +627,66 @@ impl glTFBuilder {
         primitive
             .attributes
             .insert(Checked::Valid(Semantic::Normals), accessor);
+
+        Ok(())
+    }
+
+    pub fn insert_weights(
+        &mut self,
+        mesh: Index<Mesh>,
+        primitive: Index<Primitive>,
+        data: &[Vector4],
+    ) -> Result<()> {
+        let accessor = self.insert_vec4(
+            &format!(
+                "{} weights",
+                self.root
+                    .meshes
+                    .get(mesh.value())
+                    .unwrap()
+                    .name
+                    .as_ref()
+                    .unwrap()
+            ),
+            data,
+        )?;
+
+        let mesh = self.root.meshes.get_mut(mesh.value()).unwrap();
+        let primitive = mesh.primitives.get_mut(primitive.value()).unwrap();
+
+        primitive
+            .attributes
+            .insert(Checked::Valid(Semantic::Weights(0)), accessor);
+
+        Ok(())
+    }
+
+    pub fn insert_joints(
+        &mut self,
+        mesh: Index<Mesh>,
+        primitive: Index<Primitive>,
+        data: &[[u16; 4]],
+    ) -> Result<()> {
+        let accessor = self.insert_vec4_u16(
+            &format!(
+                "{} joints",
+                self.root
+                    .meshes
+                    .get(mesh.value())
+                    .unwrap()
+                    .name
+                    .as_ref()
+                    .unwrap()
+            ),
+            data,
+        )?;
+
+        let mesh = self.root.meshes.get_mut(mesh.value()).unwrap();
+        let primitive = mesh.primitives.get_mut(primitive.value()).unwrap();
+
+        primitive
+            .attributes
+            .insert(Checked::Valid(Semantic::Joints(0)), accessor);
 
         Ok(())
     }
@@ -659,6 +792,28 @@ impl glTFBuilder {
         Index::new(self.root.nodes.push_indexed(node) as u32)
     }
 
+    pub fn insert_mesh_skin_node(
+        &mut self,
+        name: &str,
+        mesh: Index<Mesh>,
+        skin: Index<Skin>,
+    ) -> Index<Node> {
+        self.insert_node(Node {
+            camera: None,
+            children: None,
+            extensions: Default::default(),
+            extras: Default::default(),
+            matrix: None,
+            mesh: Some(mesh),
+            name: Some(name.into()),
+            rotation: None,
+            scale: None,
+            translation: None,
+            skin: Some(skin),
+            weights: None,
+        })
+    }
+
     pub fn insert_mesh_node(&mut self, name: &str, mesh: Index<Mesh>) -> Index<Node> {
         self.insert_node(Node {
             camera: None,
@@ -674,6 +829,20 @@ impl glTFBuilder {
             skin: None,
             weights: None,
         })
+    }
+
+    pub fn insert_skin(&mut self, skin: Skin) -> Index<Skin> {
+        Index::new(self.root.skins.push_indexed(skin) as u32)
+    }
+
+    pub fn insert_node_child(&mut self, parent_idx: Index<Node>, child: Index<Node>) {
+        let parent = self.root.nodes.get_mut(parent_idx.value()).unwrap();
+
+        if let Some(child_list) = &mut parent.children {
+            child_list.push(child);
+        } else {
+            parent.children = Some(vec![child]);
+        }
     }
 
     pub fn insert_scene(
@@ -944,7 +1113,7 @@ mod tests {
         let mut builder = glTFBuilder::new();
 
         let mesh = builder.insert_mesh("Test Mesh 1");
-        let primitive = builder.insert_primitive(mesh);
+        let primitive = builder.insert_primitive(mesh, gltf_json::mesh::Mode::Triangles);
 
         builder
             .insert_positions(

@@ -2,7 +2,7 @@ use crate::{
     bytes_ext::BufResult,
     chunk::{
         data::{
-            helpers::{pure3d_read_string, read_colour, read_vec2, read_vec3},
+            helpers::{self, pure3d_read_string, read_colour, read_vec2, read_vec3},
             kinds::shared::{Colour, Vector2, Vector3},
             parse_trait::Parse,
         },
@@ -303,7 +303,7 @@ impl Parse for IndexList {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MatrixList {
-    pub matrices: Vec<u32>,
+    pub matrices: Vec<Colour>,
 }
 
 impl Parse for MatrixList {
@@ -312,7 +312,7 @@ impl Parse for MatrixList {
 
         let mut matrices = Vec::with_capacity(capacity);
         for _ in 0..capacity {
-            matrices.push(bytes.safe_get_u32_le()?);
+            matrices.push(helpers::read_colour(bytes)?);
         }
 
         Ok(MatrixList { matrices })
