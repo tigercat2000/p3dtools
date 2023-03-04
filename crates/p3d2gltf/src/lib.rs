@@ -11,7 +11,7 @@ use p3dhl::{Mesh, PrimGroup, Shader, Skeleton, SkeletonJoint, Skin};
 use p3dparse::chunk::{
     data::kinds::{
         image::ImageFormat,
-        shared::{Matrix, QuaternionExt},
+        shared::{Matrix, Quaternion, QuaternionExt},
     },
     Chunk,
 };
@@ -47,16 +47,30 @@ fn export_primgroup_to_gltf(
     let prim_group_idx = builder.insert_primitive(mesh_idx, mode);
 
     if let Some(vertices) = group.vertices {
-        builder.insert_positions(mesh_idx, prim_group_idx, vertices)?;
+        if group.matrices.is_some() {
+            let vertices: Vec<_> = vertices.iter().map(|f| [-f[0], -f[1], -f[2]]).collect();
+            builder.insert_positions(mesh_idx, prim_group_idx, &vertices)?;
+        } else {
+            builder.insert_positions(mesh_idx, prim_group_idx, vertices)?;
+        }
     }
 
     if let Some(normals) = group.normals {
-        builder.insert_normals(mesh_idx, prim_group_idx, normals)?;
+        if group.matrices.is_some() {
+            let normals: Vec<_> = normals.iter().map(|f| [-f[0], -f[1], -f[2]]).collect();
+            builder.insert_normals(mesh_idx, prim_group_idx, &normals)?;
+        } else {
+            builder.insert_normals(mesh_idx, prim_group_idx, normals)?;
+        }
     }
 
     if let Some(uv_map) = group.uv_map {
-        let inverse_y: Vec<_> = uv_map.iter().map(|[x, y]| [*x, -*y]).collect();
-        builder.insert_uv_map(mesh_idx, prim_group_idx, &inverse_y)?;
+        if group.matrices.is_none() {
+            let uv_map: Vec<_> = uv_map.iter().map(|[x, y]| [-*x, -*y]).collect();
+            builder.insert_uv_map(mesh_idx, prim_group_idx, &uv_map)?;
+        } else {
+            builder.insert_uv_map(mesh_idx, prim_group_idx, uv_map)?;
+        }
     }
 
     if let Some(indices) = group.indices {
@@ -174,6 +188,9 @@ fn export_primgroup_to_gltf(
             builder.insert_weights(mesh_idx, prim_group_idx, &weights)?;
             builder.insert_joints(mesh_idx, prim_group_idx, &joints)?;
         }
+        (None, None, None) => {
+            // Skinless is okay
+        }
         (a, b, c) => eprintln!(
             "Unsupported configuration: Matrices {:?}, Palette {:?}, Weights {:?}",
             a.is_some(),
@@ -206,7 +223,7 @@ fn export_shader_to_gltf(
     let texture_to_export = if let Some(tex) = shader.texture {
         let option = textures.iter().find(|(name, _, _)| *name == tex);
         if option.is_none() {
-            eprintln!("Warning, failed to find requested texture {}", tex);
+            eprintln!("Warning, failed to find requested texture {:?}", tex);
         }
         option
     } else {
@@ -304,15 +321,30 @@ fn export_joint_to_gltf(
     builder: &mut glTFBuilder,
     joint: &SkeletonJoint,
 ) -> Index<gltf_json::Node> {
+    // let (translation, rotation) = joint.rest_pose.decompose();
+
     builder.insert_node(gltf_json::Node {
         camera: Default::default(),
         children: Default::default(),
         extensions: Default::default(),
         extras: Default::default(),
-        matrix: if joint.rest_pose == Matrix::identity() {
-            None
-        } else {
-            Some(joint.rest_pose.into())
+        // matrix: None,
+        matrix: {
+            let matrix = joint.rest_pose
+                * Matrix {
+                    elements: [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ],
+                };
+
+            if matrix != Matrix::identity() {
+                Some(matrix.into())
+            } else {
+                None
+            }
         },
         mesh: Default::default(),
         name: Some(joint.name.into()),
@@ -341,10 +373,19 @@ fn export_skeleton_to_gltf(
 
         let mut exported_joints = vec![root_idx];
 
-        let mut bind_matrices = Vec::new();
+        let mut bind_matrices: Vec<[f32; 16]> = Vec::new();
 
-        bind_matrices.push(if let Some(matrix) = root.world_matrix {
-            matrix.into()
+        bind_matrices.push(if let Some(matrix) = root.inverse_world_matrix {
+            (matrix
+                * Matrix {
+                    elements: [
+                        [-1.0, 0.0, 0.0, 0.0],
+                        [0.0, -1.0, 0.0, 0.0],
+                        [0.0, 0.0, -1.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ],
+                })
+            .into()
         } else {
             Matrix::identity().into()
         });
@@ -354,7 +395,17 @@ fn export_skeleton_to_gltf(
             exported_joints.push(joint_idx);
             builder.insert_node_child(exported_joints[joint.parent], joint_idx);
             if let Some(matrix) = joint.inverse_world_matrix {
-                bind_matrices.push(matrix.into());
+                #[rustfmt::skip]
+                let inverting_matrix = Matrix {
+                    elements: [
+                        [-1.0, 0.0, 0.0, 0.0],
+                        [0.0, -1.0, 0.0, 0.0],
+                        [0.0, 0.0, -1.0, 0.0],
+                        [0.0, 0.0, 0.0, 1.0],
+                    ],
+                };
+
+                bind_matrices.push((matrix * inverting_matrix).into());
             } else {
                 bind_matrices.push(Matrix::identity().into());
             }

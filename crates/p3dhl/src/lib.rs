@@ -6,7 +6,7 @@ use p3dparse::chunk::{
             image::ImageFormat,
             mesh::{OldPrimGroup, PrimitiveType},
             shader_param::{ShaderParam, ShaderParamValue},
-            shared::{Colour, Matrix, Vector2, Vector3},
+            shared::{Colour, Matrix, Vector2, Vector3, Quaternion, QuaternionExt},
         },
         ChunkData,
     },

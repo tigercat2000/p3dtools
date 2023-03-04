@@ -18,6 +18,7 @@ pub type Quaternion = [f32; 4];
 
 pub trait QuaternionExt {
     fn normalize(&self) -> Quaternion;
+    fn from_euler(yaw: f32, pitch: f32, roll: f32) -> Quaternion;
     fn build_from_matrix(_: &Matrix) -> Quaternion;
 }
 
@@ -33,6 +34,18 @@ impl QuaternionExt for Quaternion {
             self[1] * oo_mag,
             self[2] * oo_mag,
             self[3] * oo_mag,
+        ]
+    }
+
+    #[rustfmt::skip]
+    /// Takes degrees
+    fn from_euler(yaw: f32, pitch: f32, roll: f32) -> Quaternion {
+        // let (yaw, pitch, roll) = (yaw.to_radians(), pitch.to_radians(), roll.to_radians());
+        [
+            (roll / 2.0).sin() * (pitch / 2.0).cos() * (yaw / 2.0).cos() - (roll / 2.0).cos() * (pitch / 2.0).sin() * (yaw / 2.0).sin(),
+            (roll / 2.0).cos() * (pitch / 2.0).sin() * (yaw / 2.0).cos() + (roll / 2.0).sin() * (pitch / 2.0).cos() * (yaw / 2.0).sin(),
+            (roll / 2.0).cos() * (pitch / 2.0).cos() * (yaw / 2.0).sin() - (roll / 2.0).sin() * (pitch / 2.0).sin() * (yaw / 2.0).cos(),
+            (roll / 2.0).cos() * (pitch / 2.0).cos() * (yaw / 2.0).cos() + (roll / 2.0).sin() * (pitch / 2.0).sin() * (yaw / 2.0).sin(),
         ]
     }
 
@@ -154,9 +167,47 @@ impl Matrix {
     }
 }
 
+impl From<Quaternion> for Matrix {
+    fn from(value: Quaternion) -> Self {
+        //assumes unit quaternion!!
+        let xs = value[0] + value[0];
+        let ys = value[1] + value[1];
+        let zs = value[2] + value[2];
+
+        let wx = value[3] * xs;
+        let wy = value[3] * ys;
+        let wz = value[3] * zs;
+
+        let xx = value[0] * xs;
+        let xy = value[0] * ys;
+        let xz = value[0] * zs;
+
+        let yy = value[1] * ys;
+        let yz = value[2] * ys;
+        let zz = value[2] * zs;
+
+        let mut new_matrix = Matrix::identity();
+
+        new_matrix[0][0] = 1.0 - (yy + zz);
+        new_matrix[1][0] = xy - wz;
+        new_matrix[2][0] = xz + wy;
+
+        new_matrix[0][1] = xy + wz;
+        new_matrix[1][1] = 1.0 - (xx + zz);
+        new_matrix[2][1] = yz - wx;
+
+        new_matrix[0][2] = xz - wy;
+        new_matrix[1][2] = yz + wx;
+        new_matrix[2][2] = 1.0 - (xx + yy);
+
+        new_matrix
+    }
+}
+
 impl From<Matrix> for [f32; 16] {
     fn from(value: Matrix) -> Self {
         let mut slice: [f32; 16] = Default::default();
+
         value
             .elements
             .iter()
@@ -164,6 +215,7 @@ impl From<Matrix> for [f32; 16] {
             .flatten()
             .enumerate()
             .for_each(|(i, f)| slice[i] = f);
+
         slice
     }
 }
