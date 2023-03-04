@@ -47,6 +47,7 @@ fn export_primgroup_to_gltf(
     let prim_group_idx = builder.insert_primitive(mesh_idx, mode);
 
     if let Some(vertices) = group.vertices {
+        // FIXME: The matrix shouldn't be inverting stuff like this
         if group.matrices.is_some() {
             let vertices: Vec<_> = vertices.iter().map(|f| [-f[0], -f[1], -f[2]]).collect();
             builder.insert_positions(mesh_idx, prim_group_idx, &vertices)?;
@@ -56,6 +57,7 @@ fn export_primgroup_to_gltf(
     }
 
     if let Some(normals) = group.normals {
+        // FIXME: The matrix shouldn't be inverting stuff like this
         if group.matrices.is_some() {
             let normals: Vec<_> = normals.iter().map(|f| [-f[0], -f[1], -f[2]]).collect();
             builder.insert_normals(mesh_idx, prim_group_idx, &normals)?;
@@ -69,6 +71,7 @@ fn export_primgroup_to_gltf(
             let uv_map: Vec<_> = uv_map.iter().map(|[x, y]| [-*x, -*y]).collect();
             builder.insert_uv_map(mesh_idx, prim_group_idx, &uv_map)?;
         } else {
+            // FIXME: The matrix shouldn't be inverting stuff like this
             builder.insert_uv_map(mesh_idx, prim_group_idx, uv_map)?;
         }
     }
@@ -330,6 +333,7 @@ fn export_joint_to_gltf(
         extras: Default::default(),
         // matrix: None,
         matrix: {
+            // FIXME: The matrix shouldn't be inverting stuff like this
             let matrix = joint.rest_pose
                 * Matrix {
                     elements: [
@@ -378,6 +382,7 @@ fn export_skeleton_to_gltf(
         bind_matrices.push(if let Some(matrix) = root.inverse_world_matrix {
             (matrix
                 * Matrix {
+                    // FIXME: The matrix shouldn't be inverting stuff like this
                     elements: [
                         [-1.0, 0.0, 0.0, 0.0],
                         [0.0, -1.0, 0.0, 0.0],
@@ -397,6 +402,7 @@ fn export_skeleton_to_gltf(
             if let Some(matrix) = joint.inverse_world_matrix {
                 #[rustfmt::skip]
                 let inverting_matrix = Matrix {
+                    // FIXME: The matrix shouldn't be inverting stuff like this
                     elements: [
                         [-1.0, 0.0, 0.0, 0.0],
                         [0.0, -1.0, 0.0, 0.0],
