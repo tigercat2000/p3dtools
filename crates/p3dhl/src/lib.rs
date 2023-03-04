@@ -270,6 +270,8 @@ pub struct SkeletonJoint<'a> {
     pub secondary_axis: i32,
     pub twist_axis: i32,
     pub rest_pose: Matrix,
+    pub world_matrix: Option<Matrix>,
+    pub inverse_world_matrix: Option<Matrix>,
 }
 
 impl<'a> SkeletonJoint<'a> {
@@ -288,6 +290,8 @@ impl<'a> SkeletonJoint<'a> {
             secondary_axis: data.secondary_axis,
             twist_axis: data.twist_axis,
             rest_pose: data.rest_pose,
+            world_matrix: None,
+            inverse_world_matrix: None,
         })
     }
 }
@@ -326,6 +330,27 @@ impl<'a> FromChunk<'a> for Skeleton<'a> {
                 for child in chunk.get_children_of_type(tree, ChunkType::P3DSkeletonJoint) {
                     joints.push(SkeletonJoint::from_chunk(child, tree)?);
                 }
+
+                // Build matrix pass
+                if !joints.is_empty() {
+                    let root = &mut joints[0];
+                    root.world_matrix = Some(root.rest_pose);
+                    root.inverse_world_matrix = Some(root.rest_pose.invert_ortho());
+
+                    for i in 1..joints.len() {
+                        let parent_index = joints[i].parent;
+                        let parent = &joints[parent_index];
+                        if let Some(matrix) = parent.world_matrix {
+                            let new_world_matrix = joints[i].rest_pose * matrix;
+                            joints[i].inverse_world_matrix = Some(new_world_matrix.invert_ortho()); 
+                            joints[i].world_matrix = Some(new_world_matrix);
+                        } else {
+                            panic!("Bone parent didn't have world matrix set!")
+                        }
+                    }
+
+                }
+
 
                 Ok(Skeleton {
                     name: &name.0,
@@ -746,7 +771,9 @@ mod test {
                         primary_axis: 0,
                         secondary_axis: 0,
                         twist_axis: 0,
-                        rest_pose: Matrix::identity()
+                        rest_pose: Matrix::identity(),
+                        world_matrix: Some(Matrix::identity()),
+                        inverse_world_matrix: Some(Matrix::identity().invert_ortho())
                     }]
                 }),
                 prim_groups: vec![PrimGroup {

@@ -9,7 +9,10 @@ use gltf_json::{
 use itertools::Itertools;
 use p3dhl::{Mesh, PrimGroup, Shader, Skeleton, SkeletonJoint, Skin};
 use p3dparse::chunk::{
-    data::kinds::{image::ImageFormat, shared::QuaternionExt},
+    data::kinds::{
+        image::ImageFormat,
+        shared::{Matrix, QuaternionExt},
+    },
     Chunk,
 };
 use std::{
@@ -60,69 +63,123 @@ fn export_primgroup_to_gltf(
         builder.insert_indices(mesh_idx, prim_group_idx, indices)?;
     }
 
-    if let (Some(matrices), Some(palette), Some(weights)) =
-        (group.matrices, group.matrix_palettes, group.weights)
-    {
-        let (joints, weights): (Vec<[u16; 4]>, Vec<[f32; 4]>) = matrices
-            .iter()
-            .zip(weights.iter())
-            .enumerate()
-            .map(|(_idx, (affecting_joints, joint_weights))| {
-                let real_joints = affecting_joints.map(|f| palette[f as usize] as u16);
+    match (group.matrices, group.matrix_palettes, group.weights) {
+        (Some(matrices), Some(palette), Some(weights)) => {
+            let (joints, weights): (Vec<[u16; 4]>, Vec<[f32; 4]>) = matrices
+                .iter()
+                .zip(weights.iter())
+                .enumerate()
+                .map(|(_idx, (affecting_joints, joint_weights))| {
+                    let real_joints = affecting_joints.map(|f| palette[f as usize] as u16);
 
-                let mut w_weight =
-                    (1.0 - joint_weights[0] - joint_weights[1] - joint_weights[2]).abs();
+                    let x_weight = joint_weights[0];
+                    let y_weight = joint_weights[1];
+                    let z_weight = joint_weights[2];
 
-                if w_weight < 0.000001 {
-                    w_weight = 0.;
-                }
+                    let mut w_weight =
+                        (1.0 - (joint_weights[0] + joint_weights[1] + joint_weights[2])).abs();
 
-                let x_weight = joint_weights[0];
-                let y_weight = joint_weights[1];
-                let z_weight = joint_weights[2];
+                    if w_weight < 0.000001 {
+                        w_weight = 0.;
+                    }
 
-                let mut joints = [
-                    real_joints[1],
-                    real_joints[2],
-                    real_joints[3],
-                    // Alpha is used as the last joint for weighting purposes.
-                    real_joints[0],
-                ];
+                    let mut joints = [
+                        real_joints[0],
+                        real_joints[1],
+                        real_joints[2],
+                        real_joints[3],
+                    ];
 
-                let mut weights = [x_weight, y_weight, z_weight, w_weight];
+                    let mut weights = [x_weight, y_weight, z_weight, w_weight];
 
-                // We have to do duplicate filtering...
-                // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
-                // Joints MUST NOT contain more than one non-zero weight for a given vertex.
-                let mut already_seen = HashSet::new();
+                    // We have to do duplicate filtering...
+                    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
+                    // Joints MUST NOT contain more than one non-zero weight for a given vertex.
+                    let mut already_seen = HashSet::new();
 
-                for (idx, joint) in joints.iter().enumerate() {
-                    if weights[idx] > 0. {
-                        if already_seen.contains(joint) {
-                            weights[idx] = 0.;
+                    for (idx, joint) in joints.iter().enumerate() {
+                        if weights[idx] > 0. {
+                            if already_seen.contains(joint) {
+                                weights[idx] = 0.;
+                            }
+                            already_seen.insert(joint);
                         }
-                        already_seen.insert(joint);
                     }
-                }
 
-                // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
-                // When the weights are stored using float component type, their linear sum SHOULD be as close as reasonably possible to 1.0 for a given vertex.
-                renormalize(&mut weights);
+                    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
+                    // When the weights are stored using float component type, their linear sum SHOULD be as close as reasonably possible to 1.0 for a given vertex.
+                    renormalize(&mut weights);
 
-                for (idx, weight) in weights.iter().enumerate() {
-                    if *weight == 0.0 {
-                        // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
-                        // Unused joint values (i.e., joints with a weight of zero) SHOULD be set to zero.
-                        joints[idx] = 0;
+                    for (idx, weight) in weights.iter().enumerate() {
+                        if *weight == 0.0 {
+                            // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
+                            // Unused joint values (i.e., joints with a weight of zero) SHOULD be set to zero.
+                            joints[idx] = 0;
+                        }
                     }
-                }
 
-                (joints, weights)
-            })
-            .unzip();
+                    (joints, weights)
+                })
+                .unzip();
 
-        builder.insert_weights(mesh_idx, prim_group_idx, &weights)?;
-        builder.insert_joints(mesh_idx, prim_group_idx, &joints)?;
+            builder.insert_weights(mesh_idx, prim_group_idx, &weights)?;
+            builder.insert_joints(mesh_idx, prim_group_idx, &joints)?;
+        }
+        (Some(matrices), Some(palette), None) => {
+            let (joints, weights): (Vec<[u16; 4]>, Vec<[f32; 4]>) = matrices
+                .iter()
+                .enumerate()
+                .map(|(_idx, affecting_joints)| {
+                    let real_joints = affecting_joints.map(|f| palette[f as usize] as u16);
+
+                    let mut joints = [
+                        real_joints[0],
+                        real_joints[1],
+                        real_joints[2],
+                        real_joints[3],
+                    ];
+
+                    let mut weights = [1., 0., 0., 0.];
+
+                    // We have to do duplicate filtering...
+                    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
+                    // Joints MUST NOT contain more than one non-zero weight for a given vertex.
+                    let mut already_seen = HashSet::new();
+
+                    for (idx, joint) in joints.iter().enumerate() {
+                        if weights[idx] > 0. {
+                            if already_seen.contains(joint) {
+                                weights[idx] = 0.;
+                            }
+                            already_seen.insert(joint);
+                        }
+                    }
+
+                    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
+                    // When the weights are stored using float component type, their linear sum SHOULD be as close as reasonably possible to 1.0 for a given vertex.
+                    renormalize(&mut weights);
+
+                    for (idx, weight) in weights.iter().enumerate() {
+                        if *weight == 0.0 {
+                            // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
+                            // Unused joint values (i.e., joints with a weight of zero) SHOULD be set to zero.
+                            joints[idx] = 0;
+                        }
+                    }
+
+                    (joints, weights)
+                })
+                .unzip();
+
+            builder.insert_weights(mesh_idx, prim_group_idx, &weights)?;
+            builder.insert_joints(mesh_idx, prim_group_idx, &joints)?;
+        }
+        (a, b, c) => eprintln!(
+            "Unsupported configuration: Matrices {:?}, Palette {:?}, Weights {:?}",
+            a.is_some(),
+            b.is_some(),
+            c.is_some()
+        ),
     }
 
     Ok(prim_group_idx)
@@ -247,29 +304,27 @@ fn export_joint_to_gltf(
     builder: &mut glTFBuilder,
     joint: &SkeletonJoint,
 ) -> Index<gltf_json::Node> {
-    let (translation, rotation, scale) = joint.rest_pose.decompose();
-
     builder.insert_node(gltf_json::Node {
         camera: Default::default(),
         children: Default::default(),
         extensions: Default::default(),
         extras: Default::default(),
-        matrix: Default::default(),
+        matrix: if joint.rest_pose == Matrix::identity() {
+            None
+        } else {
+            Some(joint.rest_pose.into())
+        },
         mesh: Default::default(),
         name: Some(joint.name.into()),
-        // rotation: None,
-        rotation: if rotation.iter().any(|f| *f != 0.) {
-            Some(UnitQuaternion(rotation.normalize()))
-        } else {
-            None
-        },
-        scale: None,
-        // scale: if scale.iter().any(|f| *f != 1.) {
-        //     // Some(scale)
+        rotation: None,
+        // rotation: if rotation.iter().any(|f| *f != 0.) {
+        //     Some(UnitQuaternion(rotation.normalize()))
         // } else {
         //     None
         // },
-        translation: Some(translation),
+        scale: None,
+        translation: None,
+        // translation: Some(translation),
         skin: Default::default(),
         weights: Default::default(),
     })
@@ -286,23 +341,37 @@ fn export_skeleton_to_gltf(
 
         let mut exported_joints = vec![root_idx];
 
+        let mut bind_matrices = Vec::new();
+
+        bind_matrices.push(if let Some(matrix) = root.world_matrix {
+            matrix.into()
+        } else {
+            Matrix::identity().into()
+        });
+
         for joint in iter {
             let joint_idx = export_joint_to_gltf(builder, joint);
             exported_joints.push(joint_idx);
             builder.insert_node_child(exported_joints[joint.parent], joint_idx);
+            if let Some(matrix) = joint.inverse_world_matrix {
+                bind_matrices.push(matrix.into());
+            } else {
+                bind_matrices.push(Matrix::identity().into());
+            }
         }
 
-        Ok((
-            builder.insert_skin(gltf_json::Skin {
-                extensions: None,
-                extras: Default::default(),
-                inverse_bind_matrices: None,
-                joints: exported_joints,
-                name: Some("Skeleton".into()),
-                skeleton: Some(root_idx),
-            }),
-            root_idx,
-        ))
+        let skin = builder.insert_skin(gltf_json::Skin {
+            extensions: None,
+            extras: Default::default(),
+            inverse_bind_matrices: None,
+            joints: exported_joints,
+            name: Some("Skeleton".into()),
+            skeleton: Some(root_idx),
+        });
+
+        builder.insert_inverse_bind_matrices(skin, &bind_matrices)?;
+
+        Ok((skin, root_idx))
     } else {
         Err(eyre!("Skeleton joint list was empty."))
     }

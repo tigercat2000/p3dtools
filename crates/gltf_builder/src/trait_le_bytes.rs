@@ -1,4 +1,4 @@
-use crate::{Vector2, Vector3, Vector4};
+use crate::{types::Matrix4, Vector2, Vector3, Vector4};
 
 pub trait WriteLEBytes {
     fn write_gltf(&self, out: &mut Vec<u8>);
@@ -83,6 +83,18 @@ impl WriteLEBytes for &[u16; 4] {
 }
 
 impl WriteLEBytes for &[[u16; 4]] {
+    fn write_gltf(&self, out: &mut Vec<u8>) {
+        self.iter().for_each(|f| f.write_gltf(out))
+    }
+}
+
+impl WriteLEBytes for &Matrix4 {
+    fn write_gltf(&self, out: &mut Vec<u8>) {
+        self.iter().for_each(|f| f.write_gltf(out))
+    }
+}
+
+impl WriteLEBytes for &[Matrix4] {
     fn write_gltf(&self, out: &mut Vec<u8>) {
         self.iter().for_each(|f| f.write_gltf(out))
     }

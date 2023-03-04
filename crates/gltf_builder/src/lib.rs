@@ -23,6 +23,8 @@ use gltf_json::{
 use serde_json::json;
 use std::{collections::HashMap, mem::size_of};
 
+use crate::types::Matrix4;
+
 /// 10 MB
 const ARBITRARY_BUFFER_LENGTH_LIMIT: u32 = 2u32.pow(10 * 2);
 
@@ -354,6 +356,30 @@ impl glTFBuilder {
         )
     }
 
+    /// This is a shortcut to create an [`Accessor`] with [`ComponentType::F32`] and [`Type::Vec4`]
+    ///
+    /// As with [`create_accessor`], it's up to the caller to pad the buffer to the right alignment
+    /// before calling this function.
+    #[allow(dead_code)]
+    fn create_accessor_mat4(
+        &mut self,
+        name: Option<&str>,
+        buffer_view: Index<buffer::View>,
+        data: &[Matrix4],
+    ) -> Result<Index<Accessor>> {
+        self.create_accessor(
+            name,
+            buffer_view,
+            0,
+            data.len() as u32,
+            Checked::Valid(GenericComponentType(ComponentType::F32)),
+            Checked::Valid(Type::Mat4),
+            data.min_components().map(|f| json!(f)),
+            data.max_components().map(|f| json!(f)),
+            false,
+        )
+    }
+
     /// This is a shortcut to create an [`Accessor`] with [`ComponentType::F32`] and [`Type::Vec3`]
     ///
     /// As with [`create_accessor`], it's up to the caller to pad the buffer to the right alignment
@@ -439,6 +465,14 @@ impl glTFBuilder {
         self.pad_to_alignment(buffer, size_of::<u32>());
         let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
         self.create_accessor_vec4_u32(Some(name), buffer_view, data)
+    }
+
+    /// Inserts [`Vec<Matrix4>`] data, like weights.
+    fn insert_mat4(&mut self, name: &str, data: &[Matrix4]) -> Result<Index<Accessor>> {
+        let buffer = self.auto_buffer(data.len() * size_of::<f32>() * 4 * 4);
+        self.pad_to_alignment(buffer, size_of::<f32>());
+        let buffer_view = self.insert_write_gltf(Some(name), buffer, data);
+        self.create_accessor_mat4(Some(name), buffer_view, data)
     }
 
     /// Inserts [`Vec<Vector4>`] data, like weights.
@@ -627,6 +661,32 @@ impl glTFBuilder {
         primitive
             .attributes
             .insert(Checked::Valid(Semantic::Normals), accessor);
+
+        Ok(())
+    }
+
+    pub fn insert_inverse_bind_matrices(
+        &mut self,
+        skin: Index<Skin>,
+        data: &[Matrix4],
+    ) -> Result<()> {
+        let accessor = self.insert_mat4(
+            &format!(
+                "{} weights",
+                self.root
+                    .skins
+                    .get(skin.value())
+                    .unwrap()
+                    .name
+                    .as_ref()
+                    .unwrap()
+            ),
+            data,
+        )?;
+
+        let skin = self.root.skins.get_mut(skin.value()).unwrap();
+
+        skin.inverse_bind_matrices = Some(accessor);
 
         Ok(())
     }
