@@ -3,16 +3,12 @@ use gltf_builder::glTFBuilder;
 use gltf_json::{
     material::EmissiveFactor,
     mesh::{Mode, Primitive},
-    scene::UnitQuaternion,
-    Index,
+    Index, Node,
 };
 use itertools::Itertools;
 use p3dhl::{Mesh, PrimGroup, Shader, Skeleton, SkeletonJoint, Skin};
 use p3dparse::chunk::{
-    data::kinds::{
-        image::ImageFormat,
-        shared::{Matrix, Quaternion, QuaternionExt},
-    },
+    data::kinds::{image::ImageFormat, shared::Matrix},
     Chunk,
 };
 use std::{
@@ -295,29 +291,21 @@ fn export_shaders_to_gltf(
         .collect()
 }
 
-fn export_mesh_to_gltf(mesh: Mesh, dest: &Path) -> Result<()> {
-    let mut builder = glTFBuilder::new();
-    builder.set_generator(&format!("Khronos glTF p3d2gltf v{}", VERSION));
-
-    let shaders = export_shaders_to_gltf(&mut builder, &mesh.shaders, &mesh.textures)?;
+fn export_mesh_to_gltf(mesh: Mesh, builder: &mut glTFBuilder) -> Result<Index<Node>> {
+    let shaders = export_shaders_to_gltf(builder, &mesh.shaders, &mesh.textures)?;
 
     let mesh_idx = builder.insert_mesh(mesh.name);
 
     for group in mesh.prim_groups {
-        let group_idx = export_primgroup_to_gltf(&mut builder, mesh_idx, &group)?;
+        let group_idx = export_primgroup_to_gltf(builder, mesh_idx, &group)?;
         if let Some(shader) = shaders.get(group.shader) {
             builder.set_primitive_material(mesh_idx, group_idx, *shader);
         }
     }
 
     let mesh_node = builder.insert_mesh_node(mesh.name, mesh_idx);
-    builder.insert_scene("scene", true, &[mesh_node]);
 
-    let string = builder.build()?;
-
-    std::fs::write(dest.join(mesh.name).with_extension("gltf"), string)?;
-
-    Ok(())
+    Ok(mesh_node)
 }
 
 fn export_joint_to_gltf(
@@ -434,23 +422,20 @@ fn export_skeleton_to_gltf(
     }
 }
 
-fn export_skin_to_gltf(skin: Skin, dest: &Path) -> Result<()> {
-    let mut builder = glTFBuilder::new();
-    builder.set_generator(&format!("Khronos glTF p3d2gltf v{}", VERSION));
-
-    let shaders = export_shaders_to_gltf(&mut builder, &skin.shaders, &skin.textures)?;
+fn export_skin_to_gltf(skin: Skin, builder: &mut glTFBuilder) -> Result<Vec<Index<Node>>> {
+    let shaders = export_shaders_to_gltf(builder, &skin.shaders, &skin.textures)?;
 
     let mesh_idx = builder.insert_mesh(skin.name);
 
     for group in skin.prim_groups {
-        let group_idx = export_primgroup_to_gltf(&mut builder, mesh_idx, &group)?;
+        let group_idx = export_primgroup_to_gltf(builder, mesh_idx, &group)?;
         if let Some(shader) = shaders.get(group.shader) {
             builder.set_primitive_material(mesh_idx, group_idx, *shader);
         }
     }
 
     let nodes = if let Some(skeleton) = skin.skeleton {
-        let (skele_idx, skele_root) = export_skeleton_to_gltf(&mut builder, &skeleton)?;
+        let (skele_idx, skele_root) = export_skeleton_to_gltf(builder, &skeleton)?;
         vec![
             builder.insert_mesh_skin_node(skin.name, mesh_idx, skele_idx),
             skele_root,
@@ -459,25 +444,35 @@ fn export_skin_to_gltf(skin: Skin, dest: &Path) -> Result<()> {
         vec![builder.insert_mesh_node(skin.name, mesh_idx)]
     };
 
-    builder.insert_scene("scene", true, &nodes);
-
-    let string = builder.build()?;
-
-    std::fs::write(dest.join(skin.name).with_extension("gltf"), string)?;
-
-    Ok(())
+    Ok(nodes)
 }
 
-pub fn export_all_to_gltf(tree: &[Chunk], dest: &Path) -> Result<()> {
+pub fn export_all_to_gltf(filename: &Path, tree: &[Chunk], dest: &Path) -> Result<()> {
+    let mut builder = glTFBuilder::new();
+    builder.set_generator(&format!("Khronos glTF p3d2gltf v{}", VERSION));
+
+    let mut nodes = vec![];
     let hltypes = p3dhl::parse_high_level_types(tree)?;
 
     for hlt in hltypes {
         match hlt {
-            p3dhl::HighLevelType::Mesh(mesh) => export_mesh_to_gltf(mesh, dest)?,
-            p3dhl::HighLevelType::Skin(skin) => export_skin_to_gltf(skin, dest)?,
+            p3dhl::HighLevelType::Mesh(mesh) => {
+                nodes.push(export_mesh_to_gltf(mesh, &mut builder)?)
+            }
+            p3dhl::HighLevelType::Skin(skin) => {
+                nodes.extend(export_skin_to_gltf(skin, &mut builder)?)
+            }
             _ => todo!(),
-        }
+        };
     }
+
+    builder.insert_scene("scene", true, &nodes);
+    let string = builder.build()?;
+    std::fs::write(
+        dest.join(filename.file_name().unwrap())
+            .with_extension("gltf"),
+        string,
+    )?;
 
     Ok(())
 }
