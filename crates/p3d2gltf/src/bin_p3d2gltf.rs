@@ -16,6 +16,7 @@ fn main() {
                 .required(true)
                 .value_parser(value_parser!(PathBuf)),
         )
+        .arg(arg!(--list "List valid meshes to export").value_parser(value_parser!(bool)))
         .get_matches();
 
     match (
@@ -33,7 +34,18 @@ fn main() {
             std::fs::create_dir_all(dest)
                 .unwrap_or_else(|_| panic!("Failed to create directory {:?}", dest));
 
-            export_all_to_gltf(src, &p3d_file, dest).expect("Failed to export obj");
+            if matches.get_flag("list") {
+                let hlt = p3dhl::parse_high_level_types(&p3d_file).expect("Failed to parse file.");
+                for x in hlt {
+                    match x {
+                        p3dhl::HighLevelType::Mesh(m) => println!("Mesh: {}", m.name),
+                        p3dhl::HighLevelType::Skin(s) => println!("Skin: {}", s.name),
+                        _ => {}
+                    }
+                }
+            } else {
+                export_all_to_gltf(src, &p3d_file, dest).expect("Failed to export obj");
+            }
         }
         _ => unreachable!(),
     }
