@@ -26,7 +26,7 @@ impl Parse for GameAttr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GameAttrParam {
     pub param: String,
     pub value: GameAttrParamValue,
@@ -46,7 +46,7 @@ impl Parse for GameAttrParam {
                 }
                 ChunkType::GameAttrVectorParam => GameAttrParamValue::Vector(read_vec3(bytes)?),
                 ChunkType::GameAttrMatrixParam => {
-                    GameAttrParamValue::Matrix(Matrix::parse(bytes, typ)?)
+                    GameAttrParamValue::Matrix(helpers::read_matrix(bytes)?)
                 }
                 _ => GameAttrParamValue::None,
             },
@@ -54,7 +54,7 @@ impl Parse for GameAttrParam {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum GameAttrParamValue {
     Int(u32),
     Float(f32),

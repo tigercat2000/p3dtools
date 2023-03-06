@@ -6,7 +6,7 @@ use p3dparse::chunk::{
             image::ImageFormat,
             mesh::{OldPrimGroup, PrimitiveType},
             shader_param::{ShaderParam, ShaderParamValue},
-            shared::{Colour, Matrix, Vector2, Vector3, Quaternion, QuaternionExt},
+            shared::{Colour, Matrix, Vector2, Vector3},
         },
         ChunkData,
     },
@@ -85,7 +85,7 @@ impl<'a> FromChunk<'a> for Shader<'a> {
 }
 
 /// Used for both [`Mesh`] and [`Skin`]
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PrimGroup<'a> {
     pub shader: &'a str,
     pub primitive_type: PrimitiveType,
@@ -170,7 +170,7 @@ impl<'a> FromChunk<'a> for PrimGroup<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Mesh<'a> {
     pub name: &'a str,
     pub prim_groups: Vec<PrimGroup<'a>>,
@@ -260,7 +260,7 @@ impl<'a> FromChunk<'a> for Mesh<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SkeletonJoint<'a> {
     pub name: &'a str,
     pub parent: usize,
@@ -313,7 +313,7 @@ impl<'a> FromChunk<'a> for SkeletonJoint<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Skeleton<'a> {
     pub name: &'a str,
     pub joints: Vec<SkeletonJoint<'a>>,
@@ -335,14 +335,14 @@ impl<'a> FromChunk<'a> for Skeleton<'a> {
                 if !joints.is_empty() {
                     let root = &mut joints[0];
                     root.world_matrix = Some(root.rest_pose);
-                    root.inverse_world_matrix = Some(root.rest_pose.invert_ortho());
+                    root.inverse_world_matrix = Some(root.rest_pose.try_inverse().unwrap());
 
                     for i in 1..joints.len() {
                         let parent_index = joints[i].parent;
                         let parent = &joints[parent_index];
                         if let Some(matrix) = parent.world_matrix {
                             let new_world_matrix = joints[i].rest_pose * matrix;
-                            joints[i].inverse_world_matrix = Some(new_world_matrix.invert_ortho()); 
+                            joints[i].inverse_world_matrix = Some(new_world_matrix.try_inverse().unwrap()); 
                             joints[i].world_matrix = Some(new_world_matrix);
                         } else {
                             panic!("Bone parent didn't have world matrix set!")
@@ -366,7 +366,7 @@ impl<'a> FromChunk<'a> for Skeleton<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Skin<'a> {
     pub name: &'a str,
     pub skeleton: Option<Skeleton<'a>>,
@@ -460,7 +460,7 @@ impl<'a> FromChunk<'a> for Skin<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum HighLevelType<'a> {
     Mesh(Mesh<'a>),
@@ -539,7 +539,7 @@ mod test {
             Chunk {
                 typ: ChunkType::PositionList,
                 data: ChunkData::PositionList(kinds::mesh::PositionList {
-                    positions: vec![[0., 0., 0.]],
+                    positions: vec![[0., 0., 0.].into()],
                 }),
                 span: Span {
                     absolute_index: 3,
@@ -600,7 +600,7 @@ mod test {
                 prim_groups: vec![PrimGroup {
                     shader: "shader1",
                     primitive_type: PrimitiveType::TriangleList,
-                    vertices: Some(&vec![[0., 0., 0.]]),
+                    vertices: Some(&vec![[0., 0., 0.].into()]),
                     normals: None,
                     tangents: None,
                     binormals: None,
@@ -667,7 +667,7 @@ mod test {
             Chunk {
                 typ: ChunkType::PositionList,
                 data: ChunkData::PositionList(kinds::mesh::PositionList {
-                    positions: vec![[0., 0., 0.]],
+                    positions: vec![[0., 0., 0.].into()],
                 }),
                 span: Span {
                     absolute_index: 3,
@@ -773,13 +773,13 @@ mod test {
                         twist_axis: 0,
                         rest_pose: Matrix::identity(),
                         world_matrix: Some(Matrix::identity()),
-                        inverse_world_matrix: Some(Matrix::identity().invert_ortho())
+                        inverse_world_matrix: Some(Matrix::identity().try_inverse().unwrap())
                     }]
                 }),
                 prim_groups: vec![PrimGroup {
                     shader: "shader1",
                     primitive_type: PrimitiveType::TriangleList,
-                    vertices: Some(&vec![[0., 0., 0.]]),
+                    vertices: Some(&vec![[0., 0., 0.].into()]),
                     normals: None,
                     tangents: None,
                     binormals: None,

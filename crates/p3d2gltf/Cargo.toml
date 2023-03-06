@@ -16,6 +16,7 @@ p3dhl = { path = "../p3dhl" }
 p3dparse = { path = "../p3dparse" }
 gltf_builder = { path = "../gltf_builder" }
 gltf-json = { version = "1.1.0", features = ["names"] }
+nalgebra = "0.32.1"
 
 [[bin]]
 name = "p3d2gltf"

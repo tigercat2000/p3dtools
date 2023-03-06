@@ -1,7 +1,7 @@
 use crate::{
     bytes_ext::BufResult,
     chunk::{
-        data::{kinds::shared::Matrix, parse_trait::Parse},
+        data::{helpers, kinds::shared::Matrix, parse_trait::Parse},
         type_identifiers::ChunkType,
     },
     Result,
@@ -22,7 +22,7 @@ impl Parse for Skeleton {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SkeletonJoint {
     pub parent: u32,
     pub dof: i32,
@@ -34,7 +34,7 @@ pub struct SkeletonJoint {
 }
 
 impl Parse for SkeletonJoint {
-    fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
+    fn parse(bytes: &mut Bytes, _typ: ChunkType) -> Result<Self> {
         Ok(SkeletonJoint {
             parent: bytes.safe_get_u32_le()?,
             dof: bytes.safe_get_i32_le()?,
@@ -42,7 +42,7 @@ impl Parse for SkeletonJoint {
             primary_axis: bytes.safe_get_i32_le()?,
             secondary_axis: bytes.safe_get_i32_le()?,
             twist_axis: bytes.safe_get_i32_le()?,
-            rest_pose: Matrix::parse(bytes, typ)?,
+            rest_pose: helpers::read_matrix(bytes)?,
         })
     }
 }

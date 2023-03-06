@@ -6,11 +6,9 @@ use gltf_json::{
     Index, Node,
 };
 use itertools::Itertools;
+use nalgebra::Transform3;
 use p3dhl::{Mesh, PrimGroup, Shader, Skeleton, SkeletonJoint, Skin};
-use p3dparse::chunk::{
-    data::kinds::{image::ImageFormat, shared::Matrix},
-    Chunk,
-};
+use p3dparse::chunk::{data::kinds::image::ImageFormat, Chunk};
 use std::{
     collections::{HashMap, HashSet},
     path::Path,
@@ -43,33 +41,36 @@ fn export_primgroup_to_gltf(
     let prim_group_idx = builder.insert_primitive(mesh_idx, mode);
 
     if let Some(vertices) = group.vertices {
-        // FIXME: The matrix shouldn't be inverting stuff like this
-        if group.matrices.is_some() {
-            let vertices: Vec<_> = vertices.iter().map(|f| [-f[0], -f[1], -f[2]]).collect();
-            builder.insert_positions(mesh_idx, prim_group_idx, &vertices)?;
-        } else {
-            builder.insert_positions(mesh_idx, prim_group_idx, vertices)?;
-        }
+        let vertices: Vec<_> = vertices
+            .iter()
+            .map(|f| {
+                let f: [f32; 3] = f.vector.into();
+                [f[0], f[1], -f[2]]
+            })
+            .collect();
+        builder.insert_positions(mesh_idx, prim_group_idx, &vertices)?;
     }
 
     if let Some(normals) = group.normals {
-        // FIXME: The matrix shouldn't be inverting stuff like this
-        if group.matrices.is_some() {
-            let normals: Vec<_> = normals.iter().map(|f| [-f[0], -f[1], -f[2]]).collect();
-            builder.insert_normals(mesh_idx, prim_group_idx, &normals)?;
-        } else {
-            builder.insert_normals(mesh_idx, prim_group_idx, normals)?;
-        }
+        let normals: Vec<_> = normals
+            .iter()
+            .map(|f| {
+                let f: [f32; 3] = f.vector.into();
+                [f[0], f[1], f[2]]
+            })
+            .collect();
+        builder.insert_normals(mesh_idx, prim_group_idx, &normals)?;
     }
 
     if let Some(uv_map) = group.uv_map {
-        if group.matrices.is_none() {
-            let uv_map: Vec<_> = uv_map.iter().map(|[x, y]| [-*x, -*y]).collect();
-            builder.insert_uv_map(mesh_idx, prim_group_idx, &uv_map)?;
-        } else {
-            // FIXME: The matrix shouldn't be inverting stuff like this
-            builder.insert_uv_map(mesh_idx, prim_group_idx, uv_map)?;
-        }
+        let uv_map: Vec<_> = uv_map
+            .iter()
+            .map(|f| {
+                let f: [f32; 2] = (*f).into();
+                [-f[0], -f[1]]
+            })
+            .collect();
+        builder.insert_uv_map(mesh_idx, prim_group_idx, &uv_map)?;
     }
 
     if let Some(indices) = group.indices {
@@ -85,12 +86,12 @@ fn export_primgroup_to_gltf(
                 .map(|(_idx, (affecting_joints, joint_weights))| {
                     let real_joints = affecting_joints.map(|f| palette[f as usize] as u16);
 
-                    let x_weight = joint_weights[0];
-                    let y_weight = joint_weights[1];
-                    let z_weight = joint_weights[2];
+                    let x_weight = joint_weights.x;
+                    let y_weight = joint_weights.y;
+                    let z_weight = joint_weights.z;
 
                     let mut w_weight =
-                        (1.0 - (joint_weights[0] + joint_weights[1] + joint_weights[2])).abs();
+                        (1.0 - (joint_weights.x + joint_weights.y + joint_weights.z)).abs();
 
                     if w_weight < 0.000001 {
                         w_weight = 0.;
@@ -143,44 +144,9 @@ fn export_primgroup_to_gltf(
                 .iter()
                 .enumerate()
                 .map(|(_idx, affecting_joints)| {
-                    let real_joints = affecting_joints.map(|f| palette[f as usize] as u16);
-
-                    let mut joints = [
-                        real_joints[0],
-                        real_joints[1],
-                        real_joints[2],
-                        real_joints[3],
-                    ];
-
-                    let mut weights = [1., 0., 0., 0.];
-
-                    // We have to do duplicate filtering...
-                    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
-                    // Joints MUST NOT contain more than one non-zero weight for a given vertex.
-                    let mut already_seen = HashSet::new();
-
-                    for (idx, joint) in joints.iter().enumerate() {
-                        if weights[idx] > 0. {
-                            if already_seen.contains(joint) {
-                                weights[idx] = 0.;
-                            }
-                            already_seen.insert(joint);
-                        }
-                    }
-
-                    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
-                    // When the weights are stored using float component type, their linear sum SHOULD be as close as reasonably possible to 1.0 for a given vertex.
-                    renormalize(&mut weights);
-
-                    for (idx, weight) in weights.iter().enumerate() {
-                        if *weight == 0.0 {
-                            // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
-                            // Unused joint values (i.e., joints with a weight of zero) SHOULD be set to zero.
-                            joints[idx] = 0;
-                        }
-                    }
-
-                    (joints, weights)
+                    let real_joints: [u16; 4] =
+                        affecting_joints.map(|f| palette[f as usize] as u16).into();
+                    (real_joints, [1., 0., 0., 0.])
                 })
                 .unzip();
 
@@ -312,46 +278,39 @@ fn export_joint_to_gltf(
     builder: &mut glTFBuilder,
     joint: &SkeletonJoint,
 ) -> Index<gltf_json::Node> {
-    // let (translation, rotation) = joint.rest_pose.decompose();
-
     builder.insert_node(gltf_json::Node {
         camera: Default::default(),
         children: Default::default(),
         extensions: Default::default(),
         extras: Default::default(),
-        // matrix: None,
         matrix: {
-            // FIXME: The matrix shouldn't be inverting stuff like this
-            let matrix = joint.rest_pose
-                * Matrix {
-                    elements: [
-                        [1.0, 0.0, 0.0, 0.0],
-                        [0.0, 1.0, 0.0, 0.0],
-                        [0.0, 0.0, 1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
-                    ],
-                };
-
-            if matrix != Matrix::identity() {
-                Some(matrix.into())
-            } else {
-                None
-            }
+            None
+            // if joint.rest_pose != Matrix::identity() {
+            //     Some(joint.rest_pose.into())
+            // } else {
+            //     None
+            // }
         },
         mesh: Default::default(),
         name: Some(joint.name.into()),
         rotation: None,
-        // rotation: if rotation.iter().any(|f| *f != 0.) {
-        //     Some(UnitQuaternion(rotation.normalize()))
-        // } else {
-        //     None
-        // },
         scale: None,
         translation: None,
-        // translation: Some(translation),
         skin: Default::default(),
         weights: Default::default(),
     })
+}
+
+fn transform_to_f32x16(transform: Transform3<f32>) -> [f32; 16] {
+    let mut f = [0.; 16];
+    let arr: [[f32; 4]; 4] = transform.into_inner().into();
+
+    arr.iter()
+        .flatten()
+        .enumerate()
+        .for_each(|(k, v)| f[k] = *v);
+
+    f
 }
 
 // Returns root skeleton node
@@ -368,19 +327,10 @@ fn export_skeleton_to_gltf(
         let mut bind_matrices: Vec<[f32; 16]> = Vec::new();
 
         bind_matrices.push(if let Some(matrix) = root.inverse_world_matrix {
-            (matrix
-                * Matrix {
-                    // FIXME: The matrix shouldn't be inverting stuff like this
-                    elements: [
-                        [-1.0, 0.0, 0.0, 0.0],
-                        [0.0, -1.0, 0.0, 0.0],
-                        [0.0, 0.0, -1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
-                    ],
-                })
-            .into()
+            transform_to_f32x16(matrix)
         } else {
-            Matrix::identity().into()
+            let matrix: Transform3<f32> = Transform3::identity();
+            transform_to_f32x16(matrix.try_inverse().unwrap())
         });
 
         for joint in iter {
@@ -388,20 +338,22 @@ fn export_skeleton_to_gltf(
             exported_joints.push(joint_idx);
             builder.insert_node_child(exported_joints[joint.parent], joint_idx);
             if let Some(matrix) = joint.inverse_world_matrix {
-                #[rustfmt::skip]
-                let inverting_matrix = Matrix {
-                    // FIXME: The matrix shouldn't be inverting stuff like this
-                    elements: [
-                        [-1.0, 0.0, 0.0, 0.0],
-                        [0.0, -1.0, 0.0, 0.0],
-                        [0.0, 0.0, -1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
-                    ],
-                };
+                // #[rustfmt::skip]
+                // let inverting_matrix = Matrix {
+                //     // FIXME: The matrix shouldn't be inverting stuff like this
+                //     elements: [
+                //         [-1.0, 0.0, 0.0, 0.0],
+                //         [0.0, -1.0, 0.0, 0.0],
+                //         [0.0, 0.0, -1.0, 0.0],
+                //         [0.0, 0.0, 0.0, 1.0],
+                //     ],
+                // };
 
-                bind_matrices.push((matrix * inverting_matrix).into());
+                // bind_matrices.push((matrix * inverting_matrix).into());
+                bind_matrices.push(transform_to_f32x16(matrix));
             } else {
-                bind_matrices.push(Matrix::identity().into());
+                let matrix: Transform3<f32> = Transform3::identity();
+                bind_matrices.push(transform_to_f32x16(matrix.try_inverse().unwrap()));
             }
         }
 

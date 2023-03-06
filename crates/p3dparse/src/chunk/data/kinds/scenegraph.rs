@@ -1,7 +1,11 @@
 use crate::{
     bytes_ext::BufResult,
     chunk::{
-        data::{helpers::pure3d_read_string, kinds::shared::Matrix, parse_trait::Parse},
+        data::{
+            helpers::{self, pure3d_read_string},
+            kinds::shared::Matrix,
+            parse_trait::Parse,
+        },
         type_identifiers::ChunkType,
     },
     Result,
@@ -23,7 +27,7 @@ impl Parse for ScenegraphBranch {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ScenegraphTransform {
     pub num_children: u32,
@@ -31,10 +35,10 @@ pub struct ScenegraphTransform {
 }
 
 impl Parse for ScenegraphTransform {
-    fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
+    fn parse(bytes: &mut Bytes, _typ: ChunkType) -> Result<Self> {
         Ok(ScenegraphTransform {
             num_children: bytes.safe_get_u32_le()?,
-            transform: Matrix::parse(bytes, typ)?,
+            transform: helpers::read_matrix(bytes)?,
         })
     }
 }

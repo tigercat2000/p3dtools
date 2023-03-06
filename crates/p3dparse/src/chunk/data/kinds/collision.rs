@@ -127,7 +127,7 @@ impl Parse for CollisionSphere {
         })
     }
 }
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CollisionVector {
     pub vector: Vector3,
@@ -171,7 +171,7 @@ impl Parse for CollisionObjectAttribute {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct IntersectDSG {
     pub indices: Vec<u32>,

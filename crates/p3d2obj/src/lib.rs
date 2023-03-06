@@ -52,7 +52,7 @@ impl<'a> WriteObj for p3dhl::PrimGroup<'a> {
     fn write_vertices<W: Write>(&self, mut writer: W) -> Result<()> {
         if let Some(vertices) = self.vertices {
             for x in vertices {
-                writeln!(writer, "v {} {} {}", x[0], x[1], x[2])?;
+                writeln!(writer, "v {} {} {}", x.x, x.y, x.z)?;
             }
         }
         Ok(())
@@ -61,7 +61,7 @@ impl<'a> WriteObj for p3dhl::PrimGroup<'a> {
     fn write_normals<W: Write>(&self, mut writer: W) -> Result<()> {
         if let Some(normals) = self.normals {
             for x in normals {
-                writeln!(writer, "vn {} {} {}", x[0], x[1], x[2])?;
+                writeln!(writer, "vn {} {} {}", x.x, x.y, x.z)?;
             }
         }
         Ok(())
@@ -70,7 +70,7 @@ impl<'a> WriteObj for p3dhl::PrimGroup<'a> {
     fn write_uv_map<W: Write>(&self, mut writer: W) -> Result<()> {
         if let Some(uv_map) = self.uv_map {
             for x in uv_map {
-                writeln!(writer, "vt {} {}", x[0], x[1])?;
+                writeln!(writer, "vt {} {}", x.x, x.y)?;
             }
         }
         Ok(())

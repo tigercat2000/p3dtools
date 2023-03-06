@@ -71,7 +71,7 @@ mod helpers;
 pub mod kinds;
 mod parse_trait;
 
-#[derive(Clone, PartialEq, PartialOrd, Debug, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub enum ChunkData {
     None,

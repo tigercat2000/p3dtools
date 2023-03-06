@@ -9,7 +9,7 @@ use crate::{
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Shader {
     pub pddi_shader_name: String,
     pub has_translucency: u32,

@@ -13,7 +13,7 @@ use crate::{
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct OldBillboardQuad {
     pub billboard_mode: String,
     pub translation: Vector3,
@@ -67,7 +67,7 @@ impl Parse for OldBillboardQuadGroup {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct OldBillboardDisplayInfo {
     pub rotation: Quaternion,
     pub cut_off_mode: String,

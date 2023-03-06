@@ -14,7 +14,7 @@ use bytes::Bytes;
 use eyre::eyre;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct Channel {
     pub param: String,
@@ -197,7 +197,7 @@ impl Parse for Channel {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum ChannelValues {
     Float1(Vec<f32>),

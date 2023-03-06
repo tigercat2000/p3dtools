@@ -9,7 +9,7 @@ use crate::{
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct P3DCamera {
     pub FOV: f32,

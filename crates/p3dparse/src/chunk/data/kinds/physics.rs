@@ -13,7 +13,7 @@ use crate::{
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BoundingBox {
     pub low: Vector3,
     pub high: Vector3,
@@ -28,7 +28,7 @@ impl Parse for BoundingBox {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BoundingSphere {
     pub centre: Vector3,
     pub radius: f32,
@@ -85,7 +85,7 @@ impl Parse for PhysicsJoint {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PhysicsVector {
     pub vector: Vector3,
 }
@@ -98,7 +98,7 @@ impl Parse for PhysicsVector {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct PhysicsInertiaMatrix {
     pub X: Vector3,

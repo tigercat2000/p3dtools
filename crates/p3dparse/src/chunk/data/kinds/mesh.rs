@@ -15,7 +15,7 @@ use modular_bitfield::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Mesh {
     pub num_prim_groups: u32,
 }
@@ -28,7 +28,7 @@ impl Parse for Mesh {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Skin {
     pub skeleton_name: String,
     pub num_prim_groups: u32,
@@ -66,7 +66,7 @@ pub enum PrimitiveType {
 }
 
 #[bitfield(bits = 32)]
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[repr(u32)]
 pub struct VertexType {
     pub uv_count: B4,
@@ -126,7 +126,7 @@ impl<'de> Deserialize<'de> for VertexType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OldPrimGroup {
     pub shader_name: String,
     pub primitive_type: PrimitiveType,
@@ -150,7 +150,7 @@ impl Parse for OldPrimGroup {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PositionList {
     pub positions: Vec<Vector3>,
 }
@@ -168,7 +168,7 @@ impl Parse for PositionList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct UVList {
     pub channel: u32,
@@ -190,7 +190,7 @@ impl Parse for UVList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct NormalList {
     pub normals: Vec<Vector3>,
@@ -209,7 +209,7 @@ impl Parse for NormalList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct TangentList {
     pub tangents: Vec<Vector3>,
@@ -228,7 +228,7 @@ impl Parse for TangentList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct BinormalList {
     pub binormals: Vec<Vector3>,
@@ -247,7 +247,7 @@ impl Parse for BinormalList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct PackedNormalList {
     pub normals: Vec<u8>,
@@ -265,7 +265,7 @@ impl Parse for PackedNormalList {
         Ok(PackedNormalList { normals })
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ColourList {
     pub colours: Vec<Colour>,
 }
@@ -283,7 +283,7 @@ impl Parse for ColourList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IndexList {
     pub indices: Vec<u32>,
 }
@@ -301,7 +301,7 @@ impl Parse for IndexList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MatrixList {
     pub matrices: Vec<Colour>,
 }
@@ -319,7 +319,7 @@ impl Parse for MatrixList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MatrixPalette {
     pub matrices: Vec<u32>,
 }
@@ -337,7 +337,7 @@ impl Parse for MatrixPalette {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WeightList {
     pub weights: Vec<Vector3>,
 }
@@ -355,7 +355,7 @@ impl Parse for WeightList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderStatus {
     pub cast_shadow: u32,
 }
@@ -368,7 +368,7 @@ impl Parse for RenderStatus {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositeDrawable {
     pub skeleton_name: String,
 }
@@ -381,7 +381,7 @@ impl Parse for CompositeDrawable {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositeDrawableSkinList {
     pub num_elements: u32,
 }
@@ -394,7 +394,7 @@ impl Parse for CompositeDrawableSkinList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositeDrawableSkin {
     pub is_translucent: u32,
 }
@@ -407,7 +407,7 @@ impl Parse for CompositeDrawableSkin {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositeDrawablePropList {
     pub num_elements: u32,
 }
@@ -420,7 +420,7 @@ impl Parse for CompositeDrawablePropList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositeDrawableProp {
     pub is_translucent: u32,
     pub skeleton_joint_id: u32,
@@ -435,7 +435,7 @@ impl Parse for CompositeDrawableProp {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositeDrawableEffectList {
     pub num_elements: u32,
 }
@@ -448,7 +448,7 @@ impl Parse for CompositeDrawableEffectList {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompositeDrawableEffect {
     pub is_translucent: u32,
     pub skeleton_joint_id: u32,
@@ -463,7 +463,7 @@ impl Parse for CompositeDrawableEffect {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CompositeDrawableSortOrder {
     pub sort_order: f32,
 }

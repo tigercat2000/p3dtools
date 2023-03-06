@@ -28,7 +28,7 @@ impl Display for Span {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Chunk {
     pub typ: ChunkType,
     pub data: ChunkData,

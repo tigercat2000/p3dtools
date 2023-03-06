@@ -2,7 +2,7 @@ use crate::{
     bytes_ext::BufResult,
     chunk::{
         data::{
-            helpers::read_vec3,
+            helpers::{self, read_vec3},
             kinds::shared::{Matrix, Vector3},
             parse_trait::Parse,
         },
@@ -14,7 +14,7 @@ use bytes::Bytes;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct WBLocator {
     pub typ: WBLocatorType,
@@ -76,7 +76,7 @@ pub enum WBLocatorType {
     SpawnPoint = 15,
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WBTriggerVolume {
     pub typ: u32,
     pub scale: Vector3,
@@ -84,29 +84,29 @@ pub struct WBTriggerVolume {
 }
 
 impl Parse for WBTriggerVolume {
-    fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
+    fn parse(bytes: &mut Bytes, _typ: ChunkType) -> Result<Self> {
         Ok(WBTriggerVolume {
             typ: bytes.safe_get_u32_le()?,
             scale: read_vec3(bytes)?,
-            matrix: Matrix::parse(bytes, typ)?,
+            matrix: helpers::read_matrix(bytes)?,
         })
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WBMatrix {
     pub matrix: Matrix,
 }
 
 impl Parse for WBMatrix {
-    fn parse(bytes: &mut Bytes, typ: ChunkType) -> Result<Self> {
+    fn parse(bytes: &mut Bytes, _typ: ChunkType) -> Result<Self> {
         Ok(WBMatrix {
-            matrix: Matrix::parse(bytes, typ)?,
+            matrix: helpers::read_matrix(bytes)?,
         })
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct WBSpline {
     pub num_CVs: u32,
@@ -125,7 +125,7 @@ impl Parse for WBSpline {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct WBRail {
     pub behavior: u32,
