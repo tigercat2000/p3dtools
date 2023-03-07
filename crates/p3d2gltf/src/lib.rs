@@ -282,10 +282,10 @@ fn export_image_to_accompany(
     let path = folder.join(format!("{name}.png"));
 
     println!(
-        "Exporting image {:?} with data len {} to {:?}",
+        "Exporting image {:?} to {:?} ({} bytes)",
         name,
+        path,
         data.len(),
-        path
     );
     std::fs::write(path, data)?;
 

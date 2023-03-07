@@ -313,7 +313,7 @@ fn test_mesh() {
                 0 => {
                     assert_eq!(chunk.typ, ChunkType::OldPrimGroup);
                     match &chunk.data {
-                        ChunkData::OldPrimGroup(version, prim_group) => {
+                        ChunkData::PrimGroup(version, prim_group) => {
                             assert_eq!(version.0, 0);
                             assert_eq!(
                                 prim_group.vertex_types,

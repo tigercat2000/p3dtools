@@ -189,6 +189,18 @@ impl Parse for Channel {
                     values,
                 })
             }
+            ChunkType::EntityChannel => {
+                let mut values = Vec::with_capacity(frame_count);
+                for _ in 0..frame_count {
+                    values.push(helpers::pure3d_read_string(bytes)?)
+                }
+                let values = ChannelValues::Entity(values);
+                Ok(Channel {
+                    param,
+                    frames,
+                    values,
+                })
+            }
             t => Err(eyre!(
                 "ChannelData parser was passed an incorrect type {:?}",
                 t
@@ -209,6 +221,7 @@ pub enum ChannelValues {
     Quaternion(Vec<Quaternion>),
     Colour(Vec<Colour>),
     Bool(u16, Vec<u16>),
+    Entity(Vec<String>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

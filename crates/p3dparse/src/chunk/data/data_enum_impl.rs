@@ -11,7 +11,8 @@ use crate::{
                     CollisionVolume, CollisionVolumeOwner, IntersectDSG, TerrainTypeList,
                 },
                 explosion::BreakableObject,
-                export::{P3DExportInfoNamedInt, P3DExportInfoNamedString},
+                file_metadata::{ExportInfoNamedInt, ExportInfoNamedString, History},
+                game_metadata::{FollowCameraData, Locator},
                 gameattr::{GameAttr, GameAttrParam},
                 image::{Image, ImageRaw},
                 locator::{WBLocator, WBMatrix, WBRail, WBSpline, WBTriggerVolume},
@@ -34,8 +35,8 @@ use crate::{
                     OldBillboardQuadGroup,
                 },
                 old_particle_system::{
-                    OldBaseEmitter, OldParticleSystem, OldParticleSystemFactory,
-                    OldParticleSystemInstancingInfo, OldSpriteEmitter,
+                    InstanceableParticleSystem, OldBaseEmitter, OldParticleSystem,
+                    OldParticleSystemFactory, OldParticleSystemInstancingInfo, OldSpriteEmitter,
                 },
                 physics::{
                     BoundingBox, BoundingSphere, PhysicsInertiaMatrix, PhysicsJoint, PhysicsObject,
@@ -45,7 +46,7 @@ use crate::{
                     ObjectAttributes, StatePropCallbackData, StatePropDataV1, StatePropEventData,
                     StatePropFrameControllerData, StatePropStateDataV1, StatePropVisibilitiesData,
                 },
-                pure3d_other::P3DCamera,
+                pure3d_other::Camera,
                 scenegraph::{
                     ScenegraphAttachment, ScenegraphAttachmentPoint, ScenegraphBranch,
                     ScenegraphCamera, ScenegraphDrawable, ScenegraphLightGroup,
@@ -71,18 +72,7 @@ impl ChunkData {
     pub fn from_chunk_type(typ: ChunkType, bytes: &mut Bytes) -> Result<ChunkData> {
         match typ {
             ChunkType::DataFile => Ok(ChunkData::None),
-            // -- Rendering -- //
-            ChunkType::Texture => Ok(ChunkData::Texture(
-                Name::parse(bytes, typ)?,
-                Version::parse(bytes, typ)?,
-                Texture::parse(bytes, typ)?,
-            )),
-            ChunkType::Image => Ok(ChunkData::Image(
-                Name::parse(bytes, typ)?,
-                Version::parse(bytes, typ)?,
-                Image::parse(bytes, typ)?,
-            )),
-            ChunkType::ImageData => Ok(ChunkData::ImageRaw(ImageRaw::parse(bytes, typ)?)),
+            // Rendering
             ChunkType::Shader => Ok(ChunkData::Shader(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
@@ -94,16 +84,31 @@ impl ChunkData {
             | ChunkType::ShaderColourParam => {
                 Ok(ChunkData::ShaderParam(ShaderParam::parse(bytes, typ)?))
             }
+            ChunkType::Texture => Ok(ChunkData::Texture(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Texture::parse(bytes, typ)?,
+            )),
+            ChunkType::Image => Ok(ChunkData::Image(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Image::parse(bytes, typ)?,
+            )),
+            ChunkType::ImageData => Ok(ChunkData::ImageRaw(ImageRaw::parse(bytes, typ)?)),
             ChunkType::VertexShader => {
                 Ok(ChunkData::VertexShader(VertexShader::parse(bytes, typ)?))
             }
-            // -- Old Particle System -- //
+            // Old Particle System
+            ChunkType::OldParticleSystem => Ok(ChunkData::OldParticleSystem(
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldParticleSystem::parse(bytes, typ)?,
+            )),
             ChunkType::OldParticleSystemFactory => Ok(ChunkData::OldParticleSystemFactory(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
                 OldParticleSystemFactory::parse(bytes, typ)?,
             )),
-            // Ignore these chunks
             ChunkType::OldParticleInstancingInfo => Ok(ChunkData::OldParticleInstancingInfo(
                 Version::parse(bytes, typ)?,
                 OldParticleSystemInstancingInfo::parse(bytes, typ)?,
@@ -117,22 +122,20 @@ impl ChunkData {
             ChunkType::OldGeneratorAnimation => Ok(ChunkData::OldGeneratorAnimation(
                 Version::parse(bytes, typ)?,
             )),
-            ChunkType::OldSpriteEmitter => Ok(ChunkData::OldSpriteEmitter(
-                Version::parse(bytes, typ)?,
-                Name::parse(bytes, typ)?,
-                OldSpriteEmitter::parse(bytes, typ)?,
-            )),
             ChunkType::OldBaseEmitter => Ok(ChunkData::OldBaseEmitter(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
                 OldBaseEmitter::parse(bytes, typ)?,
             )),
-            ChunkType::OldParticleSystem => Ok(ChunkData::OldParticleSystem(
+            ChunkType::OldSpriteEmitter => Ok(ChunkData::OldSpriteEmitter(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
-                OldParticleSystem::parse(bytes, typ)?,
+                OldSpriteEmitter::parse(bytes, typ)?,
             )),
-            // -- Animations -- //
+            ChunkType::InstanceableParticleSystem => Ok(ChunkData::InstanceableParticleSystem(
+                InstanceableParticleSystem::parse(bytes, typ)?,
+            )),
+            // Animations
             ChunkType::Animation => Ok(ChunkData::Animation(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
@@ -160,7 +163,8 @@ impl ChunkData {
             | ChunkType::QuaternionChannel
             | ChunkType::CompressedQuaternionChannel
             | ChunkType::ColourChannel
-            | ChunkType::BoolChannel => Ok(ChunkData::Channel(
+            | ChunkType::BoolChannel
+            | ChunkType::EntityChannel => Ok(ChunkData::Channel(
                 Version::parse(bytes, typ)?,
                 Channel::parse(bytes, typ)?,
             )),
@@ -168,7 +172,20 @@ impl ChunkData {
                 Version::parse(bytes, typ)?,
                 ChannelInterpolation::parse(bytes, typ)?,
             )),
-            // -- Old Billboards -- //
+            ChunkType::OldFrameController => Ok(ChunkData::OldFrameController(
+                Version::parse(bytes, typ)?,
+                Name::parse(bytes, typ)?,
+                OldFrameController::parse(bytes, typ)?,
+            )),
+            ChunkType::P3DMultiController => Ok(ChunkData::MultiController(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                MultiController::parse(bytes, typ)?,
+            )),
+            ChunkType::P3DMultiControllerTracks => Ok(ChunkData::MultiControllerTracks(
+                MultiControllerTracks::parse(bytes, typ)?,
+            )),
+            // Old Billboards
             ChunkType::OldBillboardQuad => Ok(ChunkData::OldBillboardQuad(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
@@ -187,11 +204,11 @@ impl ChunkData {
                 Version::parse(bytes, typ)?,
                 OldBillboardPerspectiveInfo::parse(bytes, typ)?,
             )),
-            // -- Explosion FX -- //
+            // Breakable Objects
             ChunkType::BreakableObject => Ok(ChunkData::BreakableObject(BreakableObject::parse(
                 bytes, typ,
             )?)),
-            // -- Skeleton -- //
+            // Skinning
             ChunkType::P3DSkeleton => Ok(ChunkData::Skeleton(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
@@ -207,7 +224,12 @@ impl ChunkData {
             ChunkType::P3DSkeletonJointBonePreserve => Ok(ChunkData::SkeletonJointBonePreserve(
                 SkeletonJointBonePreserve::parse(bytes, typ)?,
             )),
-            // -- Mesh -- //
+            ChunkType::MatrixList => Ok(ChunkData::MatrixList(MatrixList::parse(bytes, typ)?)),
+            ChunkType::MatrixPalette => {
+                Ok(ChunkData::MatrixPalette(MatrixPalette::parse(bytes, typ)?))
+            }
+            ChunkType::WeightList => Ok(ChunkData::WeightList(WeightList::parse(bytes, typ)?)),
+            // Meshes
             ChunkType::Mesh => Ok(ChunkData::Mesh(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
@@ -218,7 +240,7 @@ impl ChunkData {
                 Version::parse(bytes, typ)?,
                 Skin::parse(bytes, typ)?,
             )),
-            ChunkType::OldPrimGroup => Ok(ChunkData::OldPrimGroup(
+            ChunkType::OldPrimGroup => Ok(ChunkData::PrimGroup(
                 Version::parse(bytes, typ)?,
                 OldPrimGroup::parse(bytes, typ)?,
             )),
@@ -236,15 +258,7 @@ impl ChunkData {
             ChunkType::UVList => Ok(ChunkData::UVList(UVList::parse(bytes, typ)?)),
             ChunkType::ColourList => Ok(ChunkData::ColourList(ColourList::parse(bytes, typ)?)),
             ChunkType::IndexList => Ok(ChunkData::IndexList(IndexList::parse(bytes, typ)?)),
-            ChunkType::MatrixList => Ok(ChunkData::MatrixList(MatrixList::parse(bytes, typ)?)),
-            ChunkType::MatrixPalette => {
-                Ok(ChunkData::MatrixPalette(MatrixPalette::parse(bytes, typ)?))
-            }
-            ChunkType::WeightList => Ok(ChunkData::WeightList(WeightList::parse(bytes, typ)?)),
-            ChunkType::BBox => Ok(ChunkData::BoundingBox(BoundingBox::parse(bytes, typ)?)),
-            ChunkType::BSphere => Ok(ChunkData::BoundingSphere(BoundingSphere::parse(
-                bytes, typ,
-            )?)),
+            // Composite Drawables (multiple meshes/skins in one)
             ChunkType::RenderStatus => {
                 Ok(ChunkData::RenderStatus(RenderStatus::parse(bytes, typ)?))
             }
@@ -293,19 +307,6 @@ impl ChunkData {
                 Name::parse(bytes, typ)?,
                 AnimatedObjectAnimation::parse(bytes, typ)?,
             )),
-            ChunkType::OldFrameController => Ok(ChunkData::OldFrameController(
-                Version::parse(bytes, typ)?,
-                Name::parse(bytes, typ)?,
-                OldFrameController::parse(bytes, typ)?,
-            )),
-            ChunkType::P3DMultiController => Ok(ChunkData::MultiController(
-                Name::parse(bytes, typ)?,
-                Version::parse(bytes, typ)?,
-                MultiController::parse(bytes, typ)?,
-            )),
-            ChunkType::P3DMultiControllerTracks => Ok(ChunkData::MultiControllerTracks(
-                MultiControllerTracks::parse(bytes, typ)?,
-            )),
             ChunkType::EntityDSG
             | ChunkType::InstanceableAnimatedDynamicPhysicsDSG
             | ChunkType::DynamicPhysicsDSG
@@ -318,6 +319,11 @@ impl ChunkData {
                 Name::parse(bytes, typ)?,
                 AnimatedObjectDSGWrapper::parse(bytes, typ)?,
             )),
+            // Physics
+            ChunkType::BBox => Ok(ChunkData::BoundingBox(BoundingBox::parse(bytes, typ)?)),
+            ChunkType::BSphere => Ok(ChunkData::BoundingSphere(BoundingSphere::parse(
+                bytes, typ,
+            )?)),
             ChunkType::PhysicsObject => Ok(ChunkData::PhysicsObject(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
@@ -332,6 +338,7 @@ impl ChunkData {
             ChunkType::PhysicsInertiaMatrix => Ok(ChunkData::PhysicsInertiaMatrix(
                 PhysicsInertiaMatrix::parse(bytes, typ)?,
             )),
+            // Collision
             ChunkType::CollisionObject => Ok(ChunkData::CollisionObject(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
@@ -371,6 +378,11 @@ impl ChunkData {
                 Version::parse(bytes, typ)?,
                 TerrainTypeList::parse(bytes, typ)?,
             )),
+            ChunkType::StaticPhysicsDSG => Ok(ChunkData::StaticPhysicsDSG(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+            )),
+            // Prop Data
             ChunkType::StatePropDataV1 => Ok(ChunkData::StatePropDataV1(
                 Version::parse(bytes, typ)?,
                 Name::parse(bytes, typ)?,
@@ -396,13 +408,13 @@ impl ChunkData {
                 Name::parse(bytes, typ)?,
                 StatePropCallbackData::parse(bytes, typ)?,
             )),
-            ChunkType::ObjectAttributes => Ok(ChunkData::ObjectAttributes(
-                ObjectAttributes::parse(bytes, typ)?,
-            )),
             ChunkType::PropInstanceList => {
                 Ok(ChunkData::PropInstanceList(Name::parse(bytes, typ)?))
             }
-            // -- Scenegraph -- //
+            ChunkType::ObjectAttributes => Ok(ChunkData::ObjectAttributes(
+                ObjectAttributes::parse(bytes, typ)?,
+            )),
+            // Scenegraph
             ChunkType::Scenegraph => Ok(ChunkData::Scenegraph(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
@@ -442,7 +454,7 @@ impl ChunkData {
             ChunkType::OldScenegraphSortOrder => Ok(ChunkData::ScenegraphSortOrder(
                 ScenegraphSortOrder::parse(bytes, typ)?,
             )),
-            // -- GameAttr -- //
+            // Game Attributes
             ChunkType::GameAttr => Ok(ChunkData::GameAttr(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
@@ -455,6 +467,16 @@ impl ChunkData {
             | ChunkType::GameAttrMatrixParam => {
                 Ok(ChunkData::GameAttrParam(GameAttrParam::parse(bytes, typ)?))
             }
+            // Game Metadata
+            ChunkType::Locator => Ok(ChunkData::Locator(
+                Name::parse(bytes, typ)?,
+                Version::parse(bytes, typ)?,
+                Locator::parse(bytes, typ)?,
+            )),
+            ChunkType::FollowCameraData => Ok(ChunkData::FollowCameraData(
+                FollowCameraData::parse(bytes, typ)?,
+            )),
+            // SHAR specific locators (no idea what WB stands for)
             ChunkType::WBLocator => Ok(ChunkData::WBLocator(
                 Name::parse(bytes, typ)?,
                 WBLocator::parse(bytes, typ)?,
@@ -472,35 +494,33 @@ impl ChunkData {
                 Name::parse(bytes, typ)?,
                 WBRail::parse(bytes, typ)?,
             )),
-            ChunkType::StaticPhysicsDSG => Ok(ChunkData::StaticPhysicsDSG(
-                Name::parse(bytes, typ)?,
-                Version::parse(bytes, typ)?,
-            )),
             // -- Export Info -- //
-            ChunkType::P3DExportInfo => Ok(ChunkData::P3DExportInfo(Name::parse(bytes, typ)?)),
-            ChunkType::P3DExportInfoNamedString => Ok(ChunkData::P3DExportInfoNamedString(
+            ChunkType::P3DExportInfo => Ok(ChunkData::ExportInfo(Name::parse(bytes, typ)?)),
+            ChunkType::P3DExportInfoNamedString => Ok(ChunkData::ExportInfoNamedString(
                 Name::parse(bytes, typ)?,
-                P3DExportInfoNamedString::parse(bytes, typ)?,
+                ExportInfoNamedString::parse(bytes, typ)?,
             )),
-            ChunkType::P3DExportInfoNamedInt => Ok(ChunkData::P3DExportInfoNamedInt(
+            ChunkType::P3DExportInfoNamedInt => Ok(ChunkData::ExportInfoNamedInt(
                 Name::parse(bytes, typ)?,
-                P3DExportInfoNamedInt::parse(bytes, typ)?,
+                ExportInfoNamedInt::parse(bytes, typ)?,
             )),
+            ChunkType::P3DHistory => Ok(ChunkData::History(History::parse(bytes, typ)?)),
             // -- P3D Other -- //
-            ChunkType::P3DCamera => Ok(ChunkData::P3DCamera(
+            ChunkType::P3DCamera => Ok(ChunkData::Camera(
                 Name::parse(bytes, typ)?,
                 Version::parse(bytes, typ)?,
-                P3DCamera::parse(bytes, typ)?,
+                Camera::parse(bytes, typ)?,
             )),
-            // -- Other produces error (eventually will produce Unknown) -- //
+            // -- Other produces Unknown -- //
             typ => {
                 eprintln!("Error: ChunkData parsing is not implemented for {:?}", typ);
                 Ok(ChunkData::Unknown)
-                // Err(eyre!("ChunkData parsing is not implemented for {:?}", typ))
             }
         }
     }
 
+    /// WARNING: This may produce None for data that is actually named!
+    /// Consequence of being bad at coding
     pub fn get_name(&self) -> Option<Name> {
         match self {
             ChunkData::Texture(name, _, _) => Some(name.clone()),

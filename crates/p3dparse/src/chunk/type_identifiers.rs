@@ -684,7 +684,8 @@ pub enum ChunkType {
     WBMatrix = 0x0300000C,
     PedNodeSegment = 0x0300000D,
     TerrainTypeList = 0x0300000E,
-    CarCameraData = 0x03000100,
+    /// Originally CarCameraData
+    FollowCameraData = 0x03000100,
     WalkerCameraData = 0x03000101,
     /// Originally RandomTexture
     SFXChunkSet = 0x03000110,

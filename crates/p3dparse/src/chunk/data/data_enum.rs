@@ -7,7 +7,8 @@ use crate::chunk::data::kinds::{
         CollisionVolumeOwner, IntersectDSG, TerrainTypeList,
     },
     explosion::BreakableObject,
-    export::{P3DExportInfoNamedInt, P3DExportInfoNamedString},
+    file_metadata::{ExportInfoNamedInt, ExportInfoNamedString, History},
+    game_metadata::{FollowCameraData, Locator},
     gameattr::{GameAttr, GameAttrParam},
     image::{Image, ImageRaw},
     locator::{WBLocator, WBMatrix, WBRail, WBSpline, WBTriggerVolume},
@@ -28,7 +29,7 @@ use crate::chunk::data::kinds::{
         OldBillboardQuadGroup,
     },
     old_particle_system::{
-        OldBaseEmitter, OldParticleSystem, OldParticleSystemFactory,
+        InstanceableParticleSystem, OldBaseEmitter, OldParticleSystem, OldParticleSystemFactory,
         OldParticleSystemInstancingInfo, OldSpriteEmitter,
     },
     physics::{
@@ -39,7 +40,7 @@ use crate::chunk::data::kinds::{
         ObjectAttributes, StatePropCallbackData, StatePropDataV1, StatePropEventData,
         StatePropFrameControllerData, StatePropStateDataV1, StatePropVisibilitiesData,
     },
-    pure3d_other::P3DCamera,
+    pure3d_other::Camera,
     scenegraph::{
         ScenegraphAttachment, ScenegraphAttachmentPoint, ScenegraphBranch, ScenegraphCamera,
         ScenegraphDrawable, ScenegraphLightGroup, ScenegraphSortOrder, ScenegraphTransform,
@@ -56,57 +57,64 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub enum ChunkData {
+    // Others
     None,
-    // -- Rendering -- //
+    Unknown,
+    // Rendering
+    Shader(Name, Version, Shader),
+    ShaderParam(ShaderParam),
     Texture(Name, Version, Texture),
     Image(Name, Version, Image),
     ImageRaw(ImageRaw),
-    Shader(Name, Version, Shader),
-    ShaderParam(ShaderParam),
     VertexShader(VertexShader),
-    // -- Old Particle System -- //
+    // Old Particle System
+    OldParticleSystem(Version, Name, OldParticleSystem),
     OldParticleSystemFactory(Version, Name, OldParticleSystemFactory),
     OldParticleInstancingInfo(Version, OldParticleSystemInstancingInfo),
     OldParticleAnimation(Version),
     OldEmitterAnimation(Version),
     OldGeneratorAnimation(Version),
-    OldSpriteEmitter(Version, Name, OldSpriteEmitter),
     OldBaseEmitter(Version, Name, OldBaseEmitter),
-    OldParticleSystem(Version, Name, OldParticleSystem),
-    // -- Animations -- //
+    OldSpriteEmitter(Version, Name, OldSpriteEmitter),
+    InstanceableParticleSystem(InstanceableParticleSystem),
+    // Animations
     Animation(Version, Name, Animation),
     AnimationSize(Version, AnimationSize),
     AnimationGroup(Version, Name, AnimationGroup),
     AnimationGroupList(Version, AnimationGroupList),
     Channel(Version, Channel),
     ChannelInterpolation(Version, ChannelInterpolation),
-    // -- Old Billboards -- //
+    OldFrameController(Version, Name, OldFrameController),
+    MultiController(Name, Version, MultiController),
+    MultiControllerTracks(MultiControllerTracks),
+    // Old Billboards
     OldBillboardQuad(Version, Name, OldBillboardQuad),
     OldBillboardQuadGroup(Version, Name, OldBillboardQuadGroup),
     OldBillboardDisplayInfo(Version, OldBillboardDisplayInfo),
     OldBillboardPerspectiveInfo(Version, OldBillboardPerspectiveInfo),
-    // -- Breakable Objects -- //
+    // Breakable Objects
     BreakableObject(BreakableObject),
-    // -- Skeleton -- //
+    // Skinning
     Skeleton(Name, Version, Skeleton),
     SkeletonJoint(Name, SkeletonJoint),
     SkeletonJointMirrorMap(SkeletonJointMirrorMap),
     SkeletonJointBonePreserve(SkeletonJointBonePreserve),
-    // -- Mesh -- //
-    Mesh(Name, Version, Mesh),
     Skin(Name, Version, Skin),
-    OldPrimGroup(Version, OldPrimGroup),
-    PositionList(PositionList),
-    NormalList(NormalList),
-    TangentList(TangentList),
-    BinormalList(BinormalList),
-    PackedNormalList(PackedNormalList),
-    UVList(UVList),
-    ColourList(ColourList),
-    IndexList(IndexList),
     MatrixList(MatrixList),
     MatrixPalette(MatrixPalette),
     WeightList(WeightList),
+    // Meshes
+    Mesh(Name, Version, Mesh),
+    PrimGroup(Version, OldPrimGroup),
+    PositionList(PositionList),
+    NormalList(NormalList),
+    PackedNormalList(PackedNormalList),
+    TangentList(TangentList),
+    BinormalList(BinormalList),
+    UVList(UVList),
+    ColourList(ColourList),
+    IndexList(IndexList),
+    // Composite Drawables (multiple meshes/skins in one)
     RenderStatus(RenderStatus),
     CompositeDrawable(Name, CompositeDrawable),
     CompositeDrawableEffect(Name, CompositeDrawableEffect),
@@ -119,19 +127,16 @@ pub enum ChunkData {
     AnimatedObjectFactory(Version, Name, AnimatedObjectFactory),
     AnimatedObject(Version, Name, AnimatedObject),
     AnimatedObjectAnimation(Version, Name, AnimatedObjectAnimation),
-    OldFrameController(Version, Name, OldFrameController),
-    MultiController(Name, Version, MultiController),
-    MultiControllerTracks(MultiControllerTracks),
     ObjectDSG(Name, Version, ObjectDSG),
     AnimatedObjectDSGWrapper(Name, AnimatedObjectDSGWrapper),
-    // -- Physics -- //
+    // Physics
     BoundingBox(BoundingBox),
     BoundingSphere(BoundingSphere),
     PhysicsObject(Name, Version, PhysicsObject),
     PhysicsJoint(PhysicsJoint),
     PhysicsVector(PhysicsVector),
     PhysicsInertiaMatrix(PhysicsInertiaMatrix),
-    // -- Collision -- //
+    // Collision
     CollisionObject(Name, Version, CollisionObject),
     CollisionVolume(CollisionVolume),
     CollisionVolumeOwner(CollisionVolumeOwner),
@@ -145,7 +150,7 @@ pub enum ChunkData {
     IntersectDSG(IntersectDSG),
     TerrainTypeList(Version, TerrainTypeList),
     StaticPhysicsDSG(Name, Version),
-    // -- Prop Data -- //
+    // Prop Data
     StatePropDataV1(Version, Name, StatePropDataV1),
     StatePropStateDataV1(Name, StatePropStateDataV1),
     StatePropVisibilitiesData(Name, StatePropVisibilitiesData),
@@ -154,7 +159,7 @@ pub enum ChunkData {
     StatePropCallbackData(Name, StatePropCallbackData),
     PropInstanceList(Name),
     ObjectAttributes(ObjectAttributes),
-    // -- Scenegraph -- //
+    // Scenegraph
     Scenegraph(Name, Version),
     ScenegraphBranch(Name, ScenegraphBranch),
     ScenegraphTransform(Name, ScenegraphTransform),
@@ -165,20 +170,23 @@ pub enum ChunkData {
     ScenegraphCamera(Name, ScenegraphCamera),
     ScenegraphLightGroup(Name, ScenegraphLightGroup),
     ScenegraphSortOrder(ScenegraphSortOrder),
-    // -- GameAttr -- //
+    // Game attributes
     GameAttr(Name, Version, GameAttr),
     GameAttrParam(GameAttrParam),
-    // -- Locator -- //
+    // Game Metadata
+    Locator(Name, Version, Locator),
+    FollowCameraData(FollowCameraData),
+    // SHAR specific locators (no idea what WB stands for)
     WBLocator(Name, WBLocator),
     WBTriggerVolume(Name, WBTriggerVolume),
     WBMatrix(WBMatrix),
     WBSpline(Name, WBSpline),
     WBRail(Name, WBRail),
-    // -- Export Info -- //
-    P3DExportInfo(Name),
-    P3DExportInfoNamedString(Name, P3DExportInfoNamedString),
-    P3DExportInfoNamedInt(Name, P3DExportInfoNamedInt),
-    // -- P3D Other -- //
-    P3DCamera(Name, Version, P3DCamera),
-    Unknown,
+    // File Metadata
+    ExportInfo(Name),
+    ExportInfoNamedString(Name, ExportInfoNamedString),
+    ExportInfoNamedInt(Name, ExportInfoNamedInt),
+    History(History),
+    // Other P3D chunks
+    Camera(Name, Version, Camera),
 }

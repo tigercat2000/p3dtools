@@ -157,7 +157,7 @@ impl<'a> FromChunk<'a> for PrimGroup<'a> {
 
     fn from_chunk(chunk: &'a Chunk, tree: &'a [Chunk]) -> Result<Self::Output> {
         match (&chunk.typ, &chunk.data) {
-            (ChunkType::OldPrimGroup, ChunkData::OldPrimGroup(_version, data)) => {
+            (ChunkType::OldPrimGroup, ChunkData::PrimGroup(_version, data)) => {
                 PrimGroup::from_data(chunk, data, tree)
             }
             (typ, data) => Err(eyre!(
@@ -560,7 +560,7 @@ mod test {
             },
             Chunk {
                 typ: ChunkType::OldPrimGroup,
-                data: ChunkData::OldPrimGroup(
+                data: ChunkData::PrimGroup(
                     kinds::version::Version(0),
                     kinds::mesh::OldPrimGroup {
                         shader_name: "shader1".into(),
@@ -688,7 +688,7 @@ mod test {
             },
             Chunk {
                 typ: ChunkType::OldPrimGroup,
-                data: ChunkData::OldPrimGroup(
+                data: ChunkData::PrimGroup(
                     kinds::version::Version(0),
                     kinds::mesh::OldPrimGroup {
                         shader_name: "shader1".into(),

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
-pub struct P3DCamera {
+pub struct Camera {
     pub FOV: f32,
     pub aspect_ratio: f32,
     pub near_clip: f32,
@@ -21,9 +21,9 @@ pub struct P3DCamera {
     pub up: Vector3,
 }
 
-impl Parse for P3DCamera {
+impl Parse for Camera {
     fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
-        Ok(P3DCamera {
+        Ok(Camera {
             FOV: bytes.safe_get_f32_le()?,
             aspect_ratio: bytes.safe_get_f32_le()?,
             near_clip: bytes.safe_get_f32_le()?,

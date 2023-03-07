@@ -109,3 +109,18 @@ impl Parse for OldParticleSystemInstancingInfo {
         })
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct InstanceableParticleSystem {
+    pub particle_type: u32,
+    pub max_instances: u32,
+}
+
+impl Parse for InstanceableParticleSystem {
+    fn parse(bytes: &mut Bytes, _: ChunkType) -> Result<Self> {
+        Ok(InstanceableParticleSystem {
+            particle_type: bytes.safe_get_u32_le()?,
+            max_instances: bytes.safe_get_u32_le()?,
+        })
+    }
+}
