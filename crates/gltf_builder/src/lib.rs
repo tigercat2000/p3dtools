@@ -562,6 +562,29 @@ impl glTFBuilder {
         Ok(Index::new(idx as u32))
     }
 
+    /// Inserts an image using a URI instead of a buffer.
+    pub fn insert_image_uri(
+        &mut self,
+        name: &str,
+        mime_type: Option<MimeType>,
+        uri: &str,
+    ) -> Result<Index<Image>> {
+        let idx = self.root.images.push_indexed(Image {
+            buffer_view: None,
+            mime_type,
+            name: Some(name.into()),
+            uri: Some(uri.into()),
+            extensions: None,
+            extras: Default::default(),
+        });
+
+        // Skip validation in release mode.
+        #[cfg(not(debug_assertions))]
+        self.check_validity()?;
+
+        Ok(Index::new(idx as u32))
+    }
+
     /// Inserts a texture given a name and image.
     pub fn insert_texture(&mut self, name: &str, image: Index<Image>) -> Result<Index<Texture>> {
         let idx = self.root.textures.push_indexed(Texture {

@@ -167,36 +167,67 @@ fn export_primgroup_to_gltf(
     Ok(prim_group_idx)
 }
 
+// fn export_texture_to_gltf(
+//     builder: &mut glTFBuilder,
+//     (name, format, data): &(&str, ImageFormat, &[u8]),
+// ) -> Result<Index<gltf_json::Texture>> {
+//     let mime_type = match format {
+//         ImageFormat::PNG => Some(gltf_json::image::MimeType("image/png".into())),
+//         f => return Err(eyre!("GLTF only accepts PNG currently, not {:?}", f)),
+//     };
+
+//     let image_idx = builder.insert_image(name, mime_type, data)?;
+//     builder.insert_texture(name, image_idx)
+// }
+
 fn export_texture_to_gltf(
     builder: &mut glTFBuilder,
-    (name, format, data): &(&str, ImageFormat, &[u8]),
+    (name, format): &(&str, Option<ImageFormat>),
 ) -> Result<Index<gltf_json::Texture>> {
     let mime_type = match format {
-        ImageFormat::PNG => Some(gltf_json::image::MimeType("image/png".into())),
-        f => return Err(eyre!("GLTF only accepts PNG currently, not {:?}", f)),
+        Some(ImageFormat::PNG) => Some(gltf_json::image::MimeType("image/png".into())),
+        _ => None,
     };
 
-    let image_idx = builder.insert_image(name, mime_type, data)?;
+    let image_idx = builder.insert_image_uri(name, mime_type, &format!("{name}.png"))?;
     builder.insert_texture(name, image_idx)
+}
+
+fn export_image_to_accompany(
+    folder: &Path,
+    (name, _, data): &(&str, ImageFormat, &[u8]),
+) -> Result<()> {
+    // Have to not use with_extension because we want ugly files like "pants_belt.bmp.png"
+    let path = folder.join(format!("{name}.png"));
+
+    println!(
+        "Exporting image {:?} with data len {} to {:?}",
+        name,
+        data.len(),
+        path
+    );
+    std::fs::write(path, data)?;
+
+    Ok(())
 }
 
 fn export_shader_to_gltf(
     builder: &mut glTFBuilder,
+    folder: &Path,
     shader: &Shader,
     textures: &[(&str, ImageFormat, &[u8])],
 ) -> Result<Index<gltf_json::Material>> {
-    let texture_to_export = if let Some(tex) = shader.texture {
-        let option = textures.iter().find(|(name, _, _)| *name == tex);
-        if option.is_none() {
-            eprintln!("Warning, failed to find requested texture {:?}", tex);
+    let texture_idx = if let Some(tex) = shader.texture {
+        if let Some(texture) = textures.iter().find(|(name, _, _)| *name == tex) {
+            export_image_to_accompany(folder, texture)?;
+        } else {
+            eprintln!(
+                "Warning: Texture {:?} was not present in file, it will have to be supplemented.",
+                tex
+            );
         }
-        option
-    } else {
-        None
-    };
 
-    let texture_idx = if let Some(texture) = texture_to_export {
-        Some(export_texture_to_gltf(builder, texture)?)
+        Some(export_texture_to_gltf(builder, &(tex, None))?)
     } else {
         None
     };
@@ -242,6 +273,7 @@ fn export_shader_to_gltf(
 
 fn export_shaders_to_gltf(
     builder: &mut glTFBuilder,
+    folder: &Path,
     shaders: &[Shader],
     textures: &[(&str, ImageFormat, &[u8])],
 ) -> Result<HashMap<String, Index<gltf_json::Material>>> {
@@ -251,14 +283,18 @@ fn export_shaders_to_gltf(
         .map(|shader| {
             Ok((
                 shader.name.into(),
-                export_shader_to_gltf(builder, shader, textures)?,
+                export_shader_to_gltf(builder, folder, shader, textures)?,
             ))
         })
         .collect()
 }
 
-fn export_mesh_to_gltf(mesh: Mesh, builder: &mut glTFBuilder) -> Result<Index<Node>> {
-    let shaders = export_shaders_to_gltf(builder, &mesh.shaders, &mesh.textures)?;
+fn export_mesh_to_gltf(
+    mesh: Mesh,
+    folder: &Path,
+    builder: &mut glTFBuilder,
+) -> Result<Index<Node>> {
+    let shaders = export_shaders_to_gltf(builder, folder, &mesh.shaders, &mesh.textures)?;
 
     let mesh_idx = builder.insert_mesh(mesh.name);
 
@@ -377,8 +413,12 @@ fn export_skeleton_to_gltf(
     }
 }
 
-fn export_skin_to_gltf(skin: Skin, builder: &mut glTFBuilder) -> Result<Vec<Index<Node>>> {
-    let shaders = export_shaders_to_gltf(builder, &skin.shaders, &skin.textures)?;
+fn export_skin_to_gltf(
+    skin: Skin,
+    folder: &Path,
+    builder: &mut glTFBuilder,
+) -> Result<Vec<Index<Node>>> {
+    let shaders = export_shaders_to_gltf(builder, folder, &skin.shaders, &skin.textures)?;
 
     let mesh_idx = builder.insert_mesh(skin.name);
 
@@ -412,10 +452,10 @@ pub fn export_all_to_gltf(filename: &Path, tree: &[Chunk], dest: &Path) -> Resul
     for hlt in hltypes {
         match hlt {
             p3dhl::HighLevelType::Mesh(mesh) => {
-                nodes.push(export_mesh_to_gltf(mesh, &mut builder)?)
+                nodes.push(export_mesh_to_gltf(mesh, dest, &mut builder)?)
             }
             p3dhl::HighLevelType::Skin(skin) => {
-                nodes.extend(export_skin_to_gltf(skin, &mut builder)?)
+                nodes.extend(export_skin_to_gltf(skin, dest, &mut builder)?)
             }
             _ => todo!(),
         };
