@@ -39,6 +39,7 @@ pub enum ShaderParamValue {
     Texture(String),
     Int(u32),
     Float(f32),
+    /// ARGB
     Colour(Colour),
     None,
 }

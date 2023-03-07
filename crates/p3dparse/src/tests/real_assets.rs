@@ -247,7 +247,7 @@ fn test_mesh() {
                             assert_eq!(param.param, "SPEC");
                             assert_eq!(
                                 param.value,
-                                ShaderParamValue::Colour([0x00, 0x00, 0x00, 0xff].into())
+                                ShaderParamValue::Colour([0xff, 0x00, 0x00, 0x00].into())
                             );
                         }
                         _ => panic!("Invalid data for {:?}", chunk.typ),
@@ -286,7 +286,7 @@ fn test_mesh() {
                             assert_eq!(param.param, "EMIS");
                             assert_eq!(
                                 param.value,
-                                ShaderParamValue::Colour([0x00, 0x00, 0x00, 0xff].into())
+                                ShaderParamValue::Colour([0xff, 0x00, 0x00, 0x00].into())
                             );
                         }
                         _ => panic!("Invalid data for {:?}", chunk.typ),

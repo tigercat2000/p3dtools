@@ -45,7 +45,7 @@ fn export_primgroup_to_gltf(
             .iter()
             .map(|f| {
                 let f: [f32; 3] = f.vector.into();
-                [f[0], f[1], -f[2]]
+                [f[0], f[1], f[2]]
             })
             .collect();
         builder.insert_positions(mesh_idx, prim_group_idx, &vertices)?;
@@ -284,12 +284,11 @@ fn export_joint_to_gltf(
         extensions: Default::default(),
         extras: Default::default(),
         matrix: {
-            None
-            // if joint.rest_pose != Matrix::identity() {
-            //     Some(joint.rest_pose.into())
-            // } else {
-            //     None
-            // }
+            if joint.rest_pose != Transform3::identity() {
+                Some(transform_to_f32x16(joint.rest_pose))
+            } else {
+                None
+            }
         },
         mesh: Default::default(),
         name: Some(joint.name.into()),
@@ -301,9 +300,13 @@ fn export_joint_to_gltf(
     })
 }
 
+/// SHAR transforms are stored in DirectX format (row-major), where we need OpenGL format (column-major)
+/// This just means we have to transpose before we flatten.
 fn transform_to_f32x16(transform: Transform3<f32>) -> [f32; 16] {
+    let transform = transform.into_inner().transpose();
+
     let mut f = [0.; 16];
-    let arr: [[f32; 4]; 4] = transform.into_inner().into();
+    let arr: [[f32; 4]; 4] = transform.into();
 
     arr.iter()
         .flatten()
