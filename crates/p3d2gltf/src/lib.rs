@@ -67,7 +67,7 @@ fn export_primgroup_to_gltf(
             .iter()
             .map(|f| {
                 let f: [f32; 2] = (*f).into();
-                [-f[0], -f[1]]
+                [f[0], -f[1]]
             })
             .collect();
         builder.insert_uv_map(mesh_idx, prim_group_idx, &uv_map)?;
@@ -144,9 +144,9 @@ fn export_primgroup_to_gltf(
                 .iter()
                 .enumerate()
                 .map(|(_idx, affecting_joints)| {
-                    let real_joints: [u16; 4] =
-                        affecting_joints.map(|f| palette[f as usize] as u16).into();
-                    (real_joints, [1., 0., 0., 0.])
+                    // In the case where there is no weight chunk, we want a weight of 1 for the first joint entry.
+                    let real_joint = [palette[affecting_joints[0] as usize] as u16, 0, 0, 0];
+                    (real_joint, [1., 0., 0., 0.])
                 })
                 .unzip();
 
@@ -193,34 +193,13 @@ fn export_texture_to_gltf(
     builder.insert_texture(name, image_idx)
 }
 
-fn export_image_to_accompany(
-    folder: &Path,
-    (name, _, data): &(&str, ImageFormat, &[u8]),
-) -> Result<()> {
-    // Have to not use with_extension because we want ugly files like "pants_belt.bmp.png"
-    let path = folder.join(format!("{name}.png"));
-
-    println!(
-        "Exporting image {:?} with data len {} to {:?}",
-        name,
-        data.len(),
-        path
-    );
-    std::fs::write(path, data)?;
-
-    Ok(())
-}
-
 fn export_shader_to_gltf(
     builder: &mut glTFBuilder,
-    folder: &Path,
     shader: &Shader,
     textures: &[(&str, ImageFormat, &[u8])],
 ) -> Result<Index<gltf_json::Material>> {
     let texture_idx = if let Some(tex) = shader.texture {
-        if let Some(texture) = textures.iter().find(|(name, _, _)| *name == tex) {
-            export_image_to_accompany(folder, texture)?;
-        } else {
+        if !textures.iter().any(|(name, _, _)| *name == tex) {
             eprintln!(
                 "Warning: Texture {:?} was not present in file, it will have to be supplemented.",
                 tex
@@ -273,7 +252,6 @@ fn export_shader_to_gltf(
 
 fn export_shaders_to_gltf(
     builder: &mut glTFBuilder,
-    folder: &Path,
     shaders: &[Shader],
     textures: &[(&str, ImageFormat, &[u8])],
 ) -> Result<HashMap<String, Index<gltf_json::Material>>> {
@@ -283,18 +261,39 @@ fn export_shaders_to_gltf(
         .map(|shader| {
             Ok((
                 shader.name.into(),
-                export_shader_to_gltf(builder, folder, shader, textures)?,
+                export_shader_to_gltf(builder, shader, textures)?,
             ))
         })
         .collect()
 }
 
-fn export_mesh_to_gltf(
-    mesh: Mesh,
+fn export_all_texture_images(folder: &Path, textures: &[(&str, ImageFormat, &[u8])]) -> Result<()> {
+    for texture in textures {
+        export_image_to_accompany(folder, texture)?;
+    }
+    Ok(())
+}
+
+fn export_image_to_accompany(
     folder: &Path,
-    builder: &mut glTFBuilder,
-) -> Result<Index<Node>> {
-    let shaders = export_shaders_to_gltf(builder, folder, &mesh.shaders, &mesh.textures)?;
+    (name, _, data): &(&str, ImageFormat, &[u8]),
+) -> Result<()> {
+    // Have to not use with_extension because we want ugly files like "pants_belt.bmp.png"
+    let path = folder.join(format!("{name}.png"));
+
+    println!(
+        "Exporting image {:?} with data len {} to {:?}",
+        name,
+        data.len(),
+        path
+    );
+    std::fs::write(path, data)?;
+
+    Ok(())
+}
+
+fn export_mesh_to_gltf(mesh: Mesh, builder: &mut glTFBuilder) -> Result<Index<Node>> {
+    let shaders = export_shaders_to_gltf(builder, &mesh.shaders, &mesh.textures)?;
 
     let mesh_idx = builder.insert_mesh(mesh.name);
 
@@ -349,6 +348,11 @@ fn transform_to_f32x16(transform: Transform3<f32>) -> [f32; 16] {
         .enumerate()
         .for_each(|(k, v)| f[k] = *v);
 
+    if let Some(last) = f.last_mut() {
+        // Floating point errors make the glTF validator cry
+        *last = 1.0;
+    }
+
     f
 }
 
@@ -377,18 +381,6 @@ fn export_skeleton_to_gltf(
             exported_joints.push(joint_idx);
             builder.insert_node_child(exported_joints[joint.parent], joint_idx);
             if let Some(matrix) = joint.inverse_world_matrix {
-                // #[rustfmt::skip]
-                // let inverting_matrix = Matrix {
-                //     // FIXME: The matrix shouldn't be inverting stuff like this
-                //     elements: [
-                //         [-1.0, 0.0, 0.0, 0.0],
-                //         [0.0, -1.0, 0.0, 0.0],
-                //         [0.0, 0.0, -1.0, 0.0],
-                //         [0.0, 0.0, 0.0, 1.0],
-                //     ],
-                // };
-
-                // bind_matrices.push((matrix * inverting_matrix).into());
                 bind_matrices.push(transform_to_f32x16(matrix));
             } else {
                 let matrix: Transform3<f32> = Transform3::identity();
@@ -413,12 +405,8 @@ fn export_skeleton_to_gltf(
     }
 }
 
-fn export_skin_to_gltf(
-    skin: Skin,
-    folder: &Path,
-    builder: &mut glTFBuilder,
-) -> Result<Vec<Index<Node>>> {
-    let shaders = export_shaders_to_gltf(builder, folder, &skin.shaders, &skin.textures)?;
+fn export_skin_to_gltf(skin: Skin, builder: &mut glTFBuilder) -> Result<Vec<Index<Node>>> {
+    let shaders = export_shaders_to_gltf(builder, &skin.shaders, &skin.textures)?;
 
     let mesh_idx = builder.insert_mesh(skin.name);
 
@@ -452,12 +440,15 @@ pub fn export_all_to_gltf(filename: &Path, tree: &[Chunk], dest: &Path) -> Resul
     for hlt in hltypes {
         match hlt {
             p3dhl::HighLevelType::Mesh(mesh) => {
-                nodes.push(export_mesh_to_gltf(mesh, dest, &mut builder)?)
+                nodes.push(export_mesh_to_gltf(mesh, &mut builder)?)
             }
             p3dhl::HighLevelType::Skin(skin) => {
-                nodes.extend(export_skin_to_gltf(skin, dest, &mut builder)?)
+                nodes.extend(export_skin_to_gltf(skin, &mut builder)?)
             }
-            _ => todo!(),
+            p3dhl::HighLevelType::AllTextures(textures) => {
+                export_all_texture_images(dest, &textures.textures)?;
+            }
+            _ => {}
         };
     }
 

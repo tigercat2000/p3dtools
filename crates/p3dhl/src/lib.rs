@@ -171,6 +171,46 @@ impl<'a> FromChunk<'a> for PrimGroup<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct AllTextures<'a> {
+    pub textures: Vec<(&'a str, ImageFormat, &'a [u8])>,
+}
+
+impl<'a> AllTextures<'a> {
+    fn from_data(tree: &'a [Chunk]) -> Self {
+        let mut textures = Self {
+            textures: vec![],
+        };
+
+        textures.textures = tree
+            .iter()
+            .filter(|f| f.typ == ChunkType::Texture)
+            // Filter for valid data & in active shader list
+            .filter_map(|f| {
+                if let ChunkData::Texture(name, _, _) = &f.data {
+                    Some((&name.0 as &str, f))
+                } else {
+                    None
+                }
+            })
+            .filter_map(|(name, f)| {
+                if let Ok(image_chunk) = f.get_child(tree, 0) {
+                    if let ChunkData::Image(_, _, data) = &image_chunk.data {
+                        if let Ok(image_raw) = image_chunk.get_child(tree, 0) {
+                            if let ChunkData::ImageRaw(raw) = &image_raw.data {
+                                return Some((name, data.image_format, &raw.data as &[u8]));
+                            }
+                        }
+                    }
+                }
+                None
+            })
+            .collect();
+    
+        textures
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Mesh<'a> {
     pub name: &'a str,
     pub prim_groups: Vec<PrimGroup<'a>>,
@@ -465,6 +505,7 @@ impl<'a> FromChunk<'a> for Skin<'a> {
 pub enum HighLevelType<'a> {
     Mesh(Mesh<'a>),
     Skin(Skin<'a>),
+    AllTextures(AllTextures<'a>)
 }
 
 // Keep these lifetimes since it matches everything else in the file and makes it clear.
@@ -479,6 +520,8 @@ pub fn parse_high_level_types<'a>(tree: &'a [Chunk]) -> Result<Vec<HighLevelType
             _ => {}
         }
     }
+
+    types.push(HighLevelType::AllTextures(AllTextures::from_data(tree)));
 
     Ok(types)
 }
