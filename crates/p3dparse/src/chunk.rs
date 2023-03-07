@@ -6,7 +6,7 @@ use std::fmt::Display;
 use crate::{
     bytes_ext::BufResult,
     chunk::{
-        data::{kinds::name::Name, ChunkData},
+        data::{data_enum::ChunkData, kinds::name::Name},
         type_identifiers::ChunkType,
     },
     Result,

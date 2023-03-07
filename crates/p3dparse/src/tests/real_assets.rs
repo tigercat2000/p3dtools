@@ -1,8 +1,8 @@
 use crate::{
     chunk::{
         data::{
+            data_enum::ChunkData,
             kinds::{image::ImageFormat, mesh::VertexType, shader_param::ShaderParamValue},
-            ChunkData,
         },
         type_identifiers::ChunkType,
         Chunk, VecChunkExtension,
