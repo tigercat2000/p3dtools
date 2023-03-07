@@ -512,8 +512,12 @@ impl ChunkData {
                 Camera::parse(bytes, typ)?,
             )),
             // -- Other produces Unknown -- //
-            typ => {
-                eprintln!("Error: ChunkData parsing is not implemented for {:?}", typ);
+            _typ => {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Warning: ChunkData parsing is not implemented for {:?}",
+                    _typ
+                );
                 Ok(ChunkData::Unknown)
             }
         }

@@ -48,6 +48,7 @@ fn export_primgroup_to_gltf(
                 [f[0], f[1], f[2]]
             })
             .collect();
+
         builder.insert_positions(mesh_idx, prim_group_idx, &vertices)?;
     }
 
@@ -196,10 +197,11 @@ fn export_texture_to_gltf(
 fn export_shader_to_gltf(
     builder: &mut glTFBuilder,
     shader: &Shader,
-    textures: &[(&str, ImageFormat, &[u8])],
+    _textures: &[(&str, ImageFormat, &[u8])],
 ) -> Result<Index<gltf_json::Material>> {
     let texture_idx = if let Some(tex) = shader.texture {
-        if !textures.iter().any(|(name, _, _)| *name == tex) {
+        #[cfg(debug_assertions)]
+        if !_textures.iter().any(|(name, _, _)| *name == tex) {
             eprintln!(
                 "Warning: Texture {:?} was not present in file, it will have to be supplemented.",
                 tex
@@ -281,6 +283,7 @@ fn export_image_to_accompany(
     // Have to not use with_extension because we want ugly files like "pants_belt.bmp.png"
     let path = folder.join(format!("{name}.png"));
 
+    #[cfg(debug_assertions)]
     println!(
         "Exporting image {:?} to {:?} ({} bytes)",
         name,

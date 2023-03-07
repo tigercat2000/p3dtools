@@ -1,3 +1,5 @@
+use std::ops::RangeBounds;
+
 use bytes::Buf;
 use paste::paste;
 
@@ -56,3 +58,43 @@ pub(crate) trait BufResult: Buf {
 }
 
 impl<I> BufResult for I where I: Buf {}
+
+pub(crate) trait BytesExt {
+    fn safe_slice(&self, range: impl RangeBounds<usize>) -> Result<Self, Error>
+    where
+        Self: Sized;
+}
+
+impl BytesExt for bytes::Bytes {
+    fn safe_slice(&self, range: impl RangeBounds<usize>) -> Result<Self, Error> {
+        use core::ops::Bound;
+
+        let len = self.remaining();
+
+        let begin = match range.start_bound() {
+            Bound::Included(&n) => n,
+            Bound::Excluded(&n) => n + 1,
+            Bound::Unbounded => 0,
+        };
+
+        let end = match range.end_bound() {
+            Bound::Included(&n) => n.checked_add(1).expect("out of range"),
+            Bound::Excluded(&n) => n,
+            Bound::Unbounded => len,
+        };
+
+        if begin > end {
+            return Err(eyre!(
+                "range start must not be greater than end: {:?} <= {:?}",
+                begin,
+                end
+            ));
+        }
+
+        if end > len {
+            return Err(eyre!("range end out of bounds: {:?} <= {:?}", end, len,));
+        }
+
+        Ok(self.slice(range))
+    }
+}

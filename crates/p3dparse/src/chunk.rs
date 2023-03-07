@@ -4,7 +4,7 @@ pub mod type_identifiers;
 use std::fmt::Display;
 
 use crate::{
-    bytes_ext::BufResult,
+    bytes_ext::{BufResult, BytesExt},
     chunk::{
         data::{data_enum::ChunkData, kinds::name::Name},
         type_identifiers::ChunkType,
@@ -41,6 +41,11 @@ impl Chunk {
     pub fn parse_root(bytes: &mut Bytes) -> Result<Vec<Chunk>> {
         let mut vec = Vec::new();
 
+        let typ: ChunkType = bytes.clone().safe_get_u32_le()?.try_into()?;
+        if typ != ChunkType::DataFile {
+            return Err(eyre!("{:?} P3D files aren't currently supported.", typ));
+        }
+
         Chunk::parse(bytes, &mut vec, None, 0)?;
 
         Ok(vec)
@@ -62,13 +67,14 @@ impl Chunk {
 
         // If the data size is larger than the total size, this is corrupted.
         if data_size > total_size {
-            return Err(eyre!("Data size is greater than total size"));
+            return Err(eyre!("File is corrupted. Data size {} is greater than total size {} for chunk {} (no lineage data available, this is a fatal error.)", data_size, total_size, relative_index));
         }
 
         // We expect to read data_size - 12 bytes in data.
         let expected_parse_size = (data_size - 12) as usize;
         // So we'll only give that many bytes to the ChunkData parser.
-        let mut data_slice = bytes.slice(0..expected_parse_size);
+        let mut data_slice = bytes.safe_slice(0..expected_parse_size)?;
+        #[cfg(debug_assertions)]
         let original_data_slice = data_slice.clone();
         // Let the data get parsed...
         let data = match ChunkData::from_chunk_type(typ, &mut data_slice) {
@@ -112,16 +118,20 @@ impl Chunk {
             let potential_children_size = total_size as usize - actually_consumed - 12;
             // However, that does not mean we want to index further than what we have read
             let mut potential_children_slice =
-                bytes.slice(actually_consumed..actually_consumed + potential_children_size);
+                bytes.safe_slice(actually_consumed..actually_consumed + potential_children_size)?;
+            #[cfg(debug_assertions)]
             let original_potential_children_slice = potential_children_slice.clone();
-            eprintln!(
-                "Recovery: We expected to parse {} bytes but actually parsed {} bytes",
-                expected_parse_size, actually_consumed
-            );
-            eprintln!(
-                "Recovery: We will try to find children in the remaining {} bytes",
-                potential_children_size
-            );
+            #[cfg(debug_assertions)]
+            {
+                eprintln!(
+                    "Recovery: We expected to parse {} bytes but actually parsed {} bytes",
+                    expected_parse_size, actually_consumed
+                );
+                eprintln!(
+                    "Recovery: We will try to find children in the remaining {} bytes",
+                    potential_children_size
+                );
+            }
 
             let mut child_count = 0;
             let mut parsed_so_far = 0;
@@ -129,22 +139,26 @@ impl Chunk {
                 let before_parse = potential_children_slice.len();
                 match Chunk::parse(&mut potential_children_slice, vec, Some(index), child_count) {
                     Ok(child) => {
+                        #[cfg(debug_assertions)]
                         eprintln!(
                             "Recovery: We sucessfully parsed a misaligned child at index {}",
                             child // vec.get(child).unwrap().get_lineage()
                         );
                         children.push(child);
                     }
-                    Err(e) => {
-                        // eprintln!(
-                        //     "Recovery: We failed to parse a misaligned child for {}",
-                        //     &chunk.get_lineage()
-                        // );
-                        eprintln!("Recovery: This was caused by: {:?}", e);
-                        eprintln!("-- Full Data Hexdump --");
-                        hexdump::hexdump(&original_data_slice);
-                        eprintln!("-- Misaligned Data Hexdump --");
-                        hexdump::hexdump(&original_potential_children_slice);
+                    Err(_e) => {
+                        #[cfg(debug_assertions)]
+                        {
+                            eprintln!(
+                                "Recovery: We failed to parse a misaligned child for {}",
+                                vec.last().unwrap().get_lineage(vec)
+                            );
+                            eprintln!("Recovery: This was caused by: {:?}", _e);
+                            eprintln!("-- Full Data Hexdump --");
+                            hexdump::hexdump(&original_data_slice);
+                            eprintln!("-- Misaligned Data Hexdump --");
+                            hexdump::hexdump(&original_potential_children_slice);
+                        }
                         // If any child parsing fails then we just have to ignore the rest of these...
                         break;
                     }
