@@ -1,7 +1,7 @@
 # p3dtools
 
-This is a monorepo of tools for the [Pure3D Engine](https://www.pcgamingwiki.com/wiki/Engine:Pure3D) developed
-by Radical Entertainment.
+This is a monorepo of my tools for the
+[Pure3D Engine by Radical Entertainment.](https://www.pcgamingwiki.com/wiki/Engine:Pure3D)
 
 Of note is `crates/p3d2gltf`, which provides the binary p3d2gltf. This binary takes an input .p3d asset file (or folder)
 and outputs the models and textures within to a
